@@ -8,7 +8,7 @@ Cc: Tejun Heo <tj@kernel.org>
 Cc: Hugh Dickins <hughd@google.com>
 Cc: Hillf Danton <dhillf@gmail.com>
 Cc: Lennart Poettering <lpoetter@redhat.com>
-Signed-off-by: Aristeu Rozanski <aris@redhat.com
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
  kernel/cgroup.c |   84 ++++++++++++++++++++++++++++----------------------------

@@ -3,17 +3,18 @@ device_cgroup: rename whitelist to exception list
 This patch replaces the "whitelist" usage in the code and comments and replace
 them by exception list related information.
 
+v2:
+- fix checkpatch warnings, including two kstrtoul() conversions
+
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- security/device_cgroup.c |  198 +++++++++++++++++++++++------------------------
- 1 file changed, 99 insertions(+), 99 deletions(-)
+ security/device_cgroup.c |  209 ++++++++++++++++++++++++-----------------------
+ 1 file changed, 108 insertions(+), 101 deletions(-)
 
-Index: github/security/device_cgroup.c
-===================================================================
---- github.orig/security/device_cgroup.c	2012-07-24 17:50:14.000000000 -0400
-+++ github/security/device_cgroup.c	2012-07-24 17:50:48.343663036 -0400
-@@ -26,12 +26,12 @@
+--- github.orig/security/device_cgroup.c	2012-08-16 16:29:16.000000000 -0400
++++ github/security/device_cgroup.c	2012-08-16 17:21:51.740040276 -0400
+@@ -26,12 +26,12 @@  * Copyright 2007 IBM Corp
  static DEFINE_MUTEX(devcgroup_mutex);
  
  /*
@@ -28,7 +29,7 @@ Index: github/security/device_cgroup.c
  	u32 major, minor;
  	short type;
  	short access;
-@@ -41,7 +41,7 @@
+@@ -41,7 +41,7 @@ struct dev_whitelist_item {
  
  struct dev_cgroup {
  	struct cgroup_subsys_state css;
@@ -37,7 +38,7 @@ Index: github/security/device_cgroup.c
  	bool deny_all;
  };
  
-@@ -75,12 +75,12 @@
+@@ -75,12 +75,12 @@ 	return 0;
  /*
   * called under devcgroup_mutex
   */
@@ -54,7 +55,7 @@ Index: github/security/device_cgroup.c
  		if (!new)
  			goto free_and_exit;
  		list_add_tail(&new->list, dest);
-@@ -89,9 +89,9 @@
+@@ -89,9 +89,9 @@ static int dev_whitelist_copy(struct lis
  	return 0;
  
  free_and_exit:
@@ -67,7 +68,7 @@ Index: github/security/device_cgroup.c
  	}
  	return -ENOMEM;
  }
-@@ -99,50 +99,50 @@
+@@ -99,50 +99,50 @@ free_and_exit:
  /*
   * called under devcgroup_mutex
   */
@@ -140,7 +141,7 @@ Index: github/security/device_cgroup.c
  		if (!walk->access) {
  			list_del_rcu(&walk->list);
  			kfree_rcu(walk, rcu);
-@@ -151,18 +151,18 @@
+@@ -151,18 +151,18 @@ static void dev_whitelist_rm(struct dev_
  }
  
  /**
@@ -166,7 +167,7 @@ Index: github/security/device_cgroup.c
  	}
  }
  
-@@ -178,7 +178,7 @@
+@@ -178,7 +178,7 @@ static struct cgroup_subsys_state *devcg
  	dev_cgroup = kzalloc(sizeof(*dev_cgroup), GFP_KERNEL);
  	if (!dev_cgroup)
  		return ERR_PTR(-ENOMEM);
@@ -175,7 +176,7 @@ Index: github/security/device_cgroup.c
  	parent_cgroup = cgroup->parent;
  
  	if (parent_cgroup == NULL)
-@@ -186,8 +186,8 @@
+@@ -186,8 +186,8 @@ static struct cgroup_subsys_state *devcg
  	else {
  		parent_dev_cgroup = cgroup_to_devcgroup(parent_cgroup);
  		mutex_lock(&devcgroup_mutex);
@@ -186,7 +187,7 @@ Index: github/security/device_cgroup.c
  		dev_cgroup->deny_all = parent_dev_cgroup->deny_all;
  		mutex_unlock(&devcgroup_mutex);
  		if (ret) {
-@@ -204,7 +204,7 @@
+@@ -204,7 +204,7 @@ static void devcgroup_destroy(struct cgr
  	struct dev_cgroup *dev_cgroup;
  
  	dev_cgroup = cgroup_to_devcgroup(cgroup);
@@ -195,7 +196,7 @@ Index: github/security/device_cgroup.c
  	kfree(dev_cgroup);
  }
  
-@@ -250,7 +250,7 @@
+@@ -250,7 +250,7 @@ static int devcgroup_seq_read(struct cgr
  				struct seq_file *m)
  {
  	struct dev_cgroup *devcgroup = cgroup_to_devcgroup(cgroup);
@@ -204,7 +205,7 @@ Index: github/security/device_cgroup.c
  	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
  
  	rcu_read_lock();
-@@ -267,11 +267,11 @@
+@@ -267,11 +267,11 @@ 		set_majmin(min, ~0);
  		seq_printf(m, "%c %s:%s %s\n", type_to_char(DEV_ALL),
  			   maj, min, acc);
  	} else {
@@ -221,7 +222,7 @@ Index: github/security/device_cgroup.c
  				   maj, min, acc);
  		}
  	}
-@@ -281,42 +281,42 @@
+@@ -281,42 +281,42 @@ 	return 0;
  }
  
  /**
@@ -240,7 +241,7 @@ Index: github/security/device_cgroup.c
 + * @refex: new exception
   */
 -static int may_access_whitelist(struct dev_cgroup *dev_cgroup,
--			        struct dev_whitelist_item *refwh)
+-				struct dev_whitelist_item *refwh)
 +static int may_access(struct dev_cgroup *dev_cgroup,
 +		      struct dev_exception_item *refex)
  {
@@ -282,7 +283,7 @@ Index: github/security/device_cgroup.c
  	 *   (deny_all, match)
  	 */
  	if (dev_cgroup->deny_all == match)
-@@ -326,11 +326,11 @@
+@@ -326,11 +326,11 @@ 	return 0;
  
  /*
   * parent_has_perm:
@@ -296,7 +297,7 @@ Index: github/security/device_cgroup.c
  {
  	struct cgroup *pcg = childcg->css.cgroup->parent;
  	struct dev_cgroup *parent;
-@@ -338,17 +338,17 @@
+@@ -338,17 +338,17 @@ static int parent_has_perm(struct dev_cg
  	if (!pcg)
  		return 1;
  	parent = cgroup_to_devcgroup(pcg);
@@ -318,12 +319,13 @@ Index: github/security/device_cgroup.c
   *
   * Taking rules away is always allowed (given CAP_SYS_ADMIN).  Granting
   * new access is only allowed if you're in the top-level cgroup, or your
-@@ -360,25 +360,25 @@
+@@ -360,25 +360,26 @@ static int devcgroup_update_access(struc
  	const char *b;
  	char *endp;
  	int count;
 -	struct dev_whitelist_item wh;
 +	struct dev_exception_item ex;
++	size_t rc;
  
  	if (!capable(CAP_SYS_ADMIN))
  		return -EPERM;
@@ -349,7 +351,7 @@ Index: github/security/device_cgroup.c
  			devcgroup->deny_all = true;
  			break;
  		default:
-@@ -386,10 +386,10 @@
+@@ -386,10 +387,10 @@ 	memset(&wh, 0, sizeof(wh));
  		}
  		return 0;
  	case 'b':
@@ -362,7 +364,7 @@ Index: github/security/device_cgroup.c
  		break;
  	default:
  		return -EINVAL;
-@@ -399,10 +399,10 @@
+@@ -399,11 +400,14 @@ 		return 0;
  		return -EINVAL;
  	b++;
  	if (*b == '*') {
@@ -371,11 +373,16 @@ Index: github/security/device_cgroup.c
  		b++;
  	} else if (isdigit(*b)) {
 -		wh.major = simple_strtoul(b, &endp, 10);
-+		ex.major = simple_strtoul(b, &endp, 10);
- 		b = endp;
+-		b = endp;
++		rc = kstrtoul(b, 10, &ex.major);
++		if (rc)
++			return -EINVAL;
++		while (isdigit(*b))
++			b++;
  	} else {
  		return -EINVAL;
-@@ -413,10 +413,10 @@
+ 	}
+@@ -413,11 +417,14 @@ 		wh.major = simple_strtoul(b, &endp, 10
  
  	/* read minor */
  	if (*b == '*') {
@@ -384,11 +391,16 @@ Index: github/security/device_cgroup.c
  		b++;
  	} else if (isdigit(*b)) {
 -		wh.minor = simple_strtoul(b, &endp, 10);
-+		ex.minor = simple_strtoul(b, &endp, 10);
- 		b = endp;
+-		b = endp;
++		rc = kstrtoul(b, 10, &ex.minor);
++		if (rc)
++			return -EINVAL;
++		while (isdigit(*b))
++			b++;
  	} else {
  		return -EINVAL;
-@@ -426,13 +426,13 @@
+ 	}
+@@ -426,13 +433,13 @@ 		wh.minor = simple_strtoul(b, &endp, 10
  	for (b++, count = 0; count < 3; count++, b++) {
  		switch (*b) {
  		case 'r':
@@ -405,7 +417,7 @@ Index: github/security/device_cgroup.c
  			break;
  		case '\n':
  		case '\0':
-@@ -445,7 +445,7 @@
+@@ -445,7 +452,7 @@ 		case '\0':
  
  	switch (filetype) {
  	case DEVCG_ALLOW:
@@ -414,7 +426,7 @@ Index: github/security/device_cgroup.c
  			return -EPERM;
  		/*
  		 * If the default policy is to allow by default, try to remove
-@@ -453,10 +453,10 @@
+@@ -453,10 +460,10 @@ 		case '\0':
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->deny_all == false) {
@@ -427,7 +439,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -464,10 +464,10 @@
+@@ -464,10 +471,10 @@ 			return 0;
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->deny_all == true) {
@@ -440,9 +452,9 @@ Index: github/security/device_cgroup.c
  	default:
  		return -EINVAL;
  	}
-@@ -528,17 +528,17 @@
+@@ -528,17 +535,17 @@ static int __devcgroup_check_permission(
  					short type, u32 major, u32 minor,
- 				        short access)
+ 					short access)
  {
 -	struct dev_whitelist_item wh;
 +	struct dev_exception_item ex;
