@@ -11,6 +11,8 @@ $ size vmlinux.o
    text    data     bss     dec     hex filename
 4658957  880729 5195032 10734718         a3cc7e vmlinux.o
 
+v6:
+- no changes
 v5:
 - no changes
 v4:
@@ -20,6 +22,11 @@ v3:
 - use simple_xattr_* prefix
 - introduce simple_xattr_add() to prevent direct list usage
 
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Hugh Dickins <hughd@google.com>
+Cc: Hillf Danton <dhillf@gmail.com>
+Cc: Lennart Poettering <lpoetter@redhat.com>
 Signed-off-by: Li Zefan <lizefan@huawei.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
@@ -30,11 +37,11 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  mm/shmem.c               |  171 +++-------------------------------------
  4 files changed, 240 insertions(+), 159 deletions(-)
 
-Index: xattr/fs/xattr.c
+Index: github/fs/xattr.c
 ===================================================================
---- xattr.orig/fs/xattr.c	2012-07-18 14:14:28.673977819 -0400
-+++ xattr/fs/xattr.c	2012-07-18 14:14:29.746007233 -0400
-@@ -783,3 +783,203 @@
+--- github.orig/fs/xattr.c	2012-08-16 11:28:12.719273435 -0400
++++ github/fs/xattr.c	2012-08-16 11:28:13.975307743 -0400
+@@ -791,3 +791,203 @@
  EXPORT_SYMBOL(generic_listxattr);
  EXPORT_SYMBOL(generic_setxattr);
  EXPORT_SYMBOL(generic_removexattr);
@@ -238,10 +245,10 @@ Index: xattr/fs/xattr.c
 +	spin_unlock(&xattrs->lock);
 +}
 +
-Index: xattr/include/linux/shmem_fs.h
+Index: github/include/linux/shmem_fs.h
 ===================================================================
---- xattr.orig/include/linux/shmem_fs.h	2012-07-18 14:14:28.673977819 -0400
-+++ xattr/include/linux/shmem_fs.h	2012-07-18 14:14:29.750007343 -0400
+--- github.orig/include/linux/shmem_fs.h	2012-08-16 11:28:12.719273435 -0400
++++ github/include/linux/shmem_fs.h	2012-08-16 11:28:13.975307743 -0400
 @@ -5,6 +5,7 @@
  #include <linux/mempolicy.h>
  #include <linux/pagemap.h>
@@ -259,10 +266,10 @@ Index: xattr/include/linux/shmem_fs.h
  	struct inode		vfs_inode;
  };
  
-Index: xattr/include/linux/xattr.h
+Index: github/include/linux/xattr.h
 ===================================================================
---- xattr.orig/include/linux/xattr.h	2012-07-18 14:14:28.673977819 -0400
-+++ xattr/include/linux/xattr.h	2012-07-18 14:14:29.750007343 -0400
+--- github.orig/include/linux/xattr.h	2012-08-16 11:28:12.719273435 -0400
++++ github/include/linux/xattr.h	2012-08-16 11:28:13.975307743 -0400
 @@ -60,6 +60,7 @@
  #ifdef  __KERNEL__
  
@@ -302,10 +309,10 @@ Index: xattr/include/linux/xattr.h
  #endif  /*  __KERNEL__  */
  
  #endif	/* _LINUX_XATTR_H */
-Index: xattr/mm/shmem.c
+Index: github/mm/shmem.c
 ===================================================================
---- xattr.orig/mm/shmem.c	2012-07-18 14:14:28.673977819 -0400
-+++ xattr/mm/shmem.c	2012-07-18 14:14:29.750007343 -0400
+--- github.orig/mm/shmem.c	2012-08-16 11:28:12.719273435 -0400
++++ github/mm/shmem.c	2012-08-16 11:28:13.975307743 -0400
 @@ -77,13 +77,6 @@
  /* Symlink up to this size is kmalloc'ed instead of using a swappable page */
  #define SHORT_SYMLINK_LEN 128
@@ -320,7 +327,7 @@ Index: xattr/mm/shmem.c
  /*
   * shmem_fallocate and shmem_writepage communicate via inode->i_private
   * (with i_mutex making sure that it has only one user at a time):
-@@ -627,7 +620,6 @@
+@@ -636,7 +629,6 @@
  static void shmem_evict_inode(struct inode *inode)
  {
  	struct shmem_inode_info *info = SHMEM_I(inode);
@@ -328,7 +335,7 @@ Index: xattr/mm/shmem.c
  
  	if (inode->i_mapping->a_ops == &shmem_aops) {
  		shmem_unacct_size(info->flags, inode->i_size);
-@@ -641,10 +633,7 @@
+@@ -650,10 +642,7 @@
  	} else
  		kfree(info->symlink);
  
@@ -340,7 +347,7 @@ Index: xattr/mm/shmem.c
  	BUG_ON(inode->i_blocks);
  	shmem_free_inode(inode->i_sb);
  	clear_inode(inode);
-@@ -1360,7 +1349,7 @@
+@@ -1377,7 +1366,7 @@
  		spin_lock_init(&info->lock);
  		info->flags = flags & VM_NORESERVE;
  		INIT_LIST_HEAD(&info->swaplist);
@@ -349,7 +356,7 @@ Index: xattr/mm/shmem.c
  		cache_no_acl(inode);
  
  		switch (mode & S_IFMT) {
-@@ -2134,28 +2123,6 @@
+@@ -2060,28 +2049,6 @@
   */
  
  /*
@@ -378,7 +385,7 @@ Index: xattr/mm/shmem.c
   * Callback for security_inode_init_security() for acquiring xattrs.
   */
  static int shmem_initxattrs(struct inode *inode,
-@@ -2164,11 +2131,11 @@
+@@ -2090,11 +2057,11 @@
  {
  	struct shmem_inode_info *info = SHMEM_I(inode);
  	const struct xattr *xattr;
@@ -392,7 +399,7 @@ Index: xattr/mm/shmem.c
  		if (!new_xattr)
  			return -ENOMEM;
  
-@@ -2185,91 +2152,12 @@
+@@ -2111,91 +2078,12 @@
  		memcpy(new_xattr->name + XATTR_SECURITY_PREFIX_LEN,
  		       xattr->name, len);
  
@@ -485,7 +492,7 @@ Index: xattr/mm/shmem.c
  static const struct xattr_handler *shmem_xattr_handlers[] = {
  #ifdef CONFIG_TMPFS_POSIX_ACL
  	&generic_acl_access_handler,
-@@ -2300,6 +2188,7 @@
+@@ -2226,6 +2114,7 @@
  static ssize_t shmem_getxattr(struct dentry *dentry, const char *name,
  			      void *buffer, size_t size)
  {
@@ -493,7 +500,7 @@ Index: xattr/mm/shmem.c
  	int err;
  
  	/*
-@@ -2314,12 +2203,13 @@
+@@ -2240,12 +2129,13 @@
  	if (err)
  		return err;
  
@@ -508,7 +515,7 @@ Index: xattr/mm/shmem.c
  	int err;
  
  	/*
-@@ -2334,15 +2224,12 @@
+@@ -2260,15 +2150,12 @@
  	if (err)
  		return err;
  
@@ -526,7 +533,7 @@ Index: xattr/mm/shmem.c
  	int err;
  
  	/*
-@@ -2357,45 +2244,13 @@
+@@ -2283,45 +2170,13 @@
  	if (err)
  		return err;
  
