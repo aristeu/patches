@@ -1,4 +1,6 @@
 deny_all.patch
 introduce_whitelist_clean.patch
 handle_whitelist_as_exceptions.patch
+kstrtou32.patch
 rename.patch
+new_files.patch

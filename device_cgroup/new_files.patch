@@ -1,0 +1,123 @@
+device_cgroup: introduce a new, more consistent interface for device_cgroup
+
+Internally device_cgroup now uses a default rule (behavior) and an exception
+list and this interface reflects it.
+
+The new files, devices.behavior ('allow' or 'deny') and devices.exceptions map
+directly to the internal state.
+
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+
+---
+ security/device_cgroup.c |   63 +++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 53 insertions(+), 10 deletions(-)
+
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-08-21 10:54:16.509079085 -0400
++++ github/security/device_cgroup.c	2012-08-21 13:55:28.974111284 -0400
+@@ -214,6 +214,8 @@
+ #define DEVCG_ALLOW 1
+ #define DEVCG_DENY 2
+ #define DEVCG_LIST 3
++#define DEVCG_BEHAVIOR 4
++#define DEVCG_EXCEPTIONS 5
+ 
+ #define MAJMINLEN 13
+ #define ACCLEN 4
+@@ -249,11 +251,25 @@
+ 		sprintf(str, "%u", m);
+ }
+ 
++static void __devcg_seq_list_exceptions(struct dev_cgroup *devcg,
++					struct seq_file *m)
++{
++	struct dev_exception_item *ex;
++	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
++
++	list_for_each_entry_rcu(ex, &devcg->exceptions, list) {
++		set_access(acc, ex->access);
++		set_majmin(maj, ex->major);
++		set_majmin(min, ex->minor);
++		seq_printf(m, "%c %s:%s %s\n", type_to_char(ex->type),
++			   maj, min, acc);
++	}
++}
++
+ static int devcgroup_seq_read(struct cgroup *cgroup, struct cftype *cft,
+ 				struct seq_file *m)
+ {
+ 	struct dev_cgroup *devcgroup = cgroup_to_devcgroup(cgroup);
+-	struct dev_exception_item *ex;
+ 	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
+ 
+ 	rcu_read_lock();
+@@ -269,20 +285,37 @@
+ 		set_majmin(min, ~0);
+ 		seq_printf(m, "%c %s:%s %s\n", type_to_char(DEV_ALL),
+ 			   maj, min, acc);
+-	} else {
+-		list_for_each_entry_rcu(ex, &devcgroup->exceptions, list) {
+-			set_access(acc, ex->access);
+-			set_majmin(maj, ex->major);
+-			set_majmin(min, ex->minor);
+-			seq_printf(m, "%c %s:%s %s\n", type_to_char(ex->type),
+-				   maj, min, acc);
+-		}
+-	}
++	} else
++		__devcg_seq_list_exceptions(devcgroup, m);
++
+ 	rcu_read_unlock();
+ 
+ 	return 0;
+ }
+ 
++static int devcg_seq_read_behavior(struct cgroup *cgroup,
++				   struct cftype *cft, struct seq_file *m)
++{
++	struct dev_cgroup *devcgroup = cgroup_to_devcgroup(cgroup);
++
++	if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW)
++		seq_printf(m, "allow\n");
++	else
++		seq_printf(m, "deny\n");
++
++	return 0;
++}
++
++static int devcg_seq_read_exceptions(struct cgroup *cgroup,
++				     struct cftype *cft, struct seq_file *m)
++{
++	struct dev_cgroup *devcgroup = cgroup_to_devcgroup(cgroup);
++
++	__devcg_seq_list_exceptions(devcgroup, m);
++
++	return 0;
++}
++
+ /**
+  * may_access - verifies if a new exception is part of what is allowed
+  *		by a dev cgroup based on the default policy +
+@@ -521,6 +554,16 @@
+ 		.read_seq_string = devcgroup_seq_read,
+ 		.private = DEVCG_LIST,
+ 	},
++	{
++		.name = "behavior",
++		.read_seq_string = devcg_seq_read_behavior,
++		.private = DEVCG_BEHAVIOR,
++	},
++	{
++		.name = "exceptions",
++		.read_seq_string = devcg_seq_read_exceptions,
++		.private = DEVCG_EXCEPTIONS,
++	},
+ 	{ }	/* terminate */
+ };
+ 

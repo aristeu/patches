@@ -1,0 +1,97 @@
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-08-20 14:55:38.392755579 -0400
++++ github/security/device_cgroup.c	2012-08-21 09:31:50.581516992 -0400
+@@ -357,18 +357,23 @@
+ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
+ 				   int filetype, const char *buffer)
+ {
+-	const char *b;
+-	char *endp;
+-	int count;
++	int count, rc;
+ 	struct dev_whitelist_item wh;
++	/* maximum characters used for a 32 bit number is 11, + '\0' */
++	char smajor[12], sminor[12], type, access[3];
+ 
+ 	if (!capable(CAP_SYS_ADMIN))
+ 		return -EPERM;
+ 
+ 	memset(&wh, 0, sizeof(wh));
+-	b = buffer;
+ 
+-	switch (*b) {
++	rc = sscanf(buffer, "%c %11s:%11s %3s", &type, smajor, sminor,
++		    access);
++	/* we accept a single "a" which doesn't require other arguments */
++	if (rc != 1 && rc != 4)
++		return -EINVAL;
++
++	switch(type) {
+ 	case 'a':
+ 		switch (filetype) {
+ 		case DEVCG_ALLOW:
+@@ -382,7 +387,8 @@
+ 			devcgroup->deny_all = true;
+ 			break;
+ 		default:
+-			return -EINVAL;
++			/* should never happen */
++			BUG();
+ 		}
+ 		return 0;
+ 	case 'b':
+@@ -394,37 +400,20 @@
+ 	default:
+ 		return -EINVAL;
+ 	}
+-	b++;
+-	if (!isspace(*b))
+-		return -EINVAL;
+-	b++;
+-	if (*b == '*') {
++
++	if (!strcmp(smajor, "*"))
+ 		wh.major = ~0;
+-		b++;
+-	} else if (isdigit(*b)) {
+-		wh.major = simple_strtoul(b, &endp, 10);
+-		b = endp;
+-	} else {
++	else if (kstrtou32(smajor, 10, &wh.major))
+ 		return -EINVAL;
+-	}
+-	if (*b != ':')
+-		return -EINVAL;
+-	b++;
+ 
+ 	/* read minor */
+-	if (*b == '*') {
++	if (!strcmp(sminor, "*"))
+ 		wh.minor = ~0;
+-		b++;
+-	} else if (isdigit(*b)) {
+-		wh.minor = simple_strtoul(b, &endp, 10);
+-		b = endp;
+-	} else {
+-		return -EINVAL;
+-	}
+-	if (!isspace(*b))
++	else if (kstrtou32(sminor, 10, &wh.minor))
+ 		return -EINVAL;
+-	for (b++, count = 0; count < 3; count++, b++) {
+-		switch (*b) {
++
++	for (count = 0; count < 3; count++) {
++		switch (access[count]) {
+ 		case 'r':
+ 			wh.access |= ACC_READ;
+ 			break;
+@@ -434,7 +423,6 @@
+ 		case 'm':
+ 			wh.access |= ACC_MKNOD;
+ 			break;
+-		case '\n':
+ 		case '\0':
+ 			count = 3;
+ 			break;

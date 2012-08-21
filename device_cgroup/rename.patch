@@ -4,17 +4,24 @@ This patch replaces the "whitelist" usage in the code and comments and replace
 them by exception list related information.
 
 v2:
-- fix checkpatch warnings, including two kstrtoul() conversions
+- fix checkpatch warnings
 
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- security/device_cgroup.c |  209 ++++++++++++++++++++++++-----------------------
- 1 file changed, 108 insertions(+), 101 deletions(-)
+ security/device_cgroup.c |  198 +++++++++++++++++++++++------------------------
+ 1 file changed, 99 insertions(+), 99 deletions(-)
 
---- github.orig/security/device_cgroup.c	2012-08-16 16:29:16.000000000 -0400
-+++ github/security/device_cgroup.c	2012-08-16 17:21:51.740040276 -0400
-@@ -26,12 +26,12 @@  * Copyright 2007 IBM Corp
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-08-21 10:51:15.000000000 -0400
++++ github/security/device_cgroup.c	2012-08-21 10:54:16.509079085 -0400
+@@ -26,12 +26,12 @@
  static DEFINE_MUTEX(devcgroup_mutex);
  
  /*
@@ -29,16 +36,16 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	u32 major, minor;
  	short type;
  	short access;
-@@ -41,7 +41,7 @@ struct dev_whitelist_item {
+@@ -41,7 +41,7 @@
  
  struct dev_cgroup {
  	struct cgroup_subsys_state css;
 -	struct list_head whitelist;
 +	struct list_head exceptions;
- 	bool deny_all;
- };
- 
-@@ -75,12 +75,12 @@ 	return 0;
+ 	enum {
+ 		DEVCG_DEFAULT_ALLOW,
+ 		DEVCG_DEFAULT_DENY,
+@@ -78,12 +78,12 @@
  /*
   * called under devcgroup_mutex
   */
@@ -55,7 +62,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  		if (!new)
  			goto free_and_exit;
  		list_add_tail(&new->list, dest);
-@@ -89,9 +89,9 @@ static int dev_whitelist_copy(struct lis
+@@ -92,9 +92,9 @@
  	return 0;
  
  free_and_exit:
@@ -68,7 +75,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	}
  	return -ENOMEM;
  }
-@@ -99,50 +99,50 @@ free_and_exit:
+@@ -102,50 +102,50 @@
  /*
   * called under devcgroup_mutex
   */
@@ -141,7 +148,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  		if (!walk->access) {
  			list_del_rcu(&walk->list);
  			kfree_rcu(walk, rcu);
-@@ -151,18 +151,18 @@ static void dev_whitelist_rm(struct dev_
+@@ -154,18 +154,18 @@
  }
  
  /**
@@ -167,7 +174,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	}
  }
  
-@@ -178,7 +178,7 @@ static struct cgroup_subsys_state *devcg
+@@ -181,7 +181,7 @@
  	dev_cgroup = kzalloc(sizeof(*dev_cgroup), GFP_KERNEL);
  	if (!dev_cgroup)
  		return ERR_PTR(-ENOMEM);
@@ -176,7 +183,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	parent_cgroup = cgroup->parent;
  
  	if (parent_cgroup == NULL)
-@@ -186,8 +186,8 @@ static struct cgroup_subsys_state *devcg
+@@ -189,8 +189,8 @@
  	else {
  		parent_dev_cgroup = cgroup_to_devcgroup(parent_cgroup);
  		mutex_lock(&devcgroup_mutex);
@@ -184,10 +191,10 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 -				&parent_dev_cgroup->whitelist);
 +		ret = dev_exceptions_copy(&dev_cgroup->exceptions,
 +					  &parent_dev_cgroup->exceptions);
- 		dev_cgroup->deny_all = parent_dev_cgroup->deny_all;
+ 		dev_cgroup->behavior = parent_dev_cgroup->behavior;
  		mutex_unlock(&devcgroup_mutex);
  		if (ret) {
-@@ -204,7 +204,7 @@ static void devcgroup_destroy(struct cgr
+@@ -207,7 +207,7 @@
  	struct dev_cgroup *dev_cgroup;
  
  	dev_cgroup = cgroup_to_devcgroup(cgroup);
@@ -196,7 +203,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	kfree(dev_cgroup);
  }
  
-@@ -250,7 +250,7 @@ static int devcgroup_seq_read(struct cgr
+@@ -253,7 +253,7 @@
  				struct seq_file *m)
  {
  	struct dev_cgroup *devcgroup = cgroup_to_devcgroup(cgroup);
@@ -205,7 +212,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
  
  	rcu_read_lock();
-@@ -267,11 +267,11 @@ 		set_majmin(min, ~0);
+@@ -270,11 +270,11 @@
  		seq_printf(m, "%c %s:%s %s\n", type_to_char(DEV_ALL),
  			   maj, min, acc);
  	} else {
@@ -222,7 +229,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  				   maj, min, acc);
  		}
  	}
-@@ -281,42 +281,42 @@ 	return 0;
+@@ -284,42 +284,42 @@
  }
  
  /**
@@ -276,14 +283,14 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	 * - the dev cgroup has its default policy to allow + exception list:
 -	 *   the new rule should *not* match any of the exceptions
 +	 *   the new exception should *not* match any of the exceptions
- 	 *   (!deny_all, !match)
+ 	 *   (behavior != DEVCG_DEFAULT_DENY, !match)
  	 * - the dev cgroup has its default policy to deny + exception list:
 -	 *   the new rule *should* match the exceptions
 +	 *   the new exception *should* match the exceptions
- 	 *   (deny_all, match)
+ 	 *   (behavior == DEVCG_DEFAULT_DENY, match)
  	 */
- 	if (dev_cgroup->deny_all == match)
-@@ -326,11 +326,11 @@ 	return 0;
+ 	if ((dev_cgroup->behavior == DEVCG_DEFAULT_DENY) == match)
+@@ -329,11 +329,11 @@
  
  /*
   * parent_has_perm:
@@ -297,7 +304,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  {
  	struct cgroup *pcg = childcg->css.cgroup->parent;
  	struct dev_cgroup *parent;
-@@ -338,17 +338,17 @@ static int parent_has_perm(struct dev_cg
+@@ -341,17 +341,17 @@
  	if (!pcg)
  		return 1;
  	parent = cgroup_to_devcgroup(pcg);
@@ -319,13 +326,12 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
   *
   * Taking rules away is always allowed (given CAP_SYS_ADMIN).  Granting
   * new access is only allowed if you're in the top-level cgroup, or your
-@@ -360,25 +360,26 @@ static int devcgroup_update_access(struc
+@@ -363,25 +363,25 @@
  	const char *b;
- 	char *endp;
- 	int count;
+ 	char temp[12];		/* 11 + 1 characters needed for a u32 */
+ 	int count, rc;
 -	struct dev_whitelist_item wh;
 +	struct dev_exception_item ex;
-+	size_t rc;
  
  	if (!capable(CAP_SYS_ADMIN))
  		return -EPERM;
@@ -343,15 +349,15 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  				return -EPERM;
 -			dev_whitelist_clean(devcgroup);
 +			dev_exception_clean(devcgroup);
- 			devcgroup->deny_all = false;
+ 			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
  			break;
  		case DEVCG_DENY:
 -			dev_whitelist_clean(devcgroup);
 +			dev_exception_clean(devcgroup);
- 			devcgroup->deny_all = true;
+ 			devcgroup->behavior = DEVCG_DEFAULT_DENY;
  			break;
  		default:
-@@ -386,10 +387,10 @@ 	memset(&wh, 0, sizeof(wh));
+@@ -389,10 +389,10 @@
  		}
  		return 0;
  	case 'b':
@@ -364,7 +370,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  		break;
  	default:
  		return -EINVAL;
-@@ -399,11 +400,14 @@ 		return 0;
+@@ -402,7 +402,7 @@
  		return -EINVAL;
  	b++;
  	if (*b == '*') {
@@ -372,17 +378,17 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 +		ex.major = ~0;
  		b++;
  	} else if (isdigit(*b)) {
--		wh.major = simple_strtoul(b, &endp, 10);
--		b = endp;
-+		rc = kstrtoul(b, 10, &ex.major);
-+		if (rc)
-+			return -EINVAL;
-+		while (isdigit(*b))
-+			b++;
+ 		memset(temp, 0, sizeof(temp));
+@@ -412,7 +412,7 @@
+ 			if (!isdigit(*b))
+ 				break;
+ 		}
+-		rc = kstrtou32(temp, 10, &wh.major);
++		rc = kstrtou32(temp, 10, &ex.major);
+ 		if (rc)
+ 			return -EINVAL;
  	} else {
- 		return -EINVAL;
- 	}
-@@ -413,11 +417,14 @@ 		wh.major = simple_strtoul(b, &endp, 10
+@@ -424,7 +424,7 @@
  
  	/* read minor */
  	if (*b == '*') {
@@ -390,17 +396,17 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 +		ex.minor = ~0;
  		b++;
  	} else if (isdigit(*b)) {
--		wh.minor = simple_strtoul(b, &endp, 10);
--		b = endp;
-+		rc = kstrtoul(b, 10, &ex.minor);
-+		if (rc)
-+			return -EINVAL;
-+		while (isdigit(*b))
-+			b++;
+ 		memset(temp, 0, sizeof(temp));
+@@ -434,7 +434,7 @@
+ 			if (!isdigit(*b))
+ 				break;
+ 		}
+-		rc = kstrtou32(temp, 10, &wh.minor);
++		rc = kstrtou32(temp, 10, &ex.minor);
+ 		if (rc)
+ 			return -EINVAL;
  	} else {
- 		return -EINVAL;
- 	}
-@@ -426,13 +433,13 @@ 		wh.minor = simple_strtoul(b, &endp, 10
+@@ -445,13 +445,13 @@
  	for (b++, count = 0; count < 3; count++, b++) {
  		switch (*b) {
  		case 'r':
@@ -417,7 +423,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  			break;
  		case '\n':
  		case '\0':
-@@ -445,7 +452,7 @@ 		case '\0':
+@@ -464,7 +464,7 @@
  
  	switch (filetype) {
  	case DEVCG_ALLOW:
@@ -426,10 +432,10 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  			return -EPERM;
  		/*
  		 * If the default policy is to allow by default, try to remove
-@@ -453,10 +460,10 @@ 		case '\0':
+@@ -472,10 +472,10 @@
  		 * don't want to break compatibility
  		 */
- 		if (devcgroup->deny_all == false) {
+ 		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
 -			dev_whitelist_rm(devcgroup, &wh);
 +			dev_exception_rm(devcgroup, &ex);
  			return 0;
@@ -439,10 +445,10 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -464,10 +471,10 @@ 			return 0;
+@@ -483,10 +483,10 @@
  		 * don't want to break compatibility
  		 */
- 		if (devcgroup->deny_all == true) {
+ 		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {
 -			dev_whitelist_rm(devcgroup, &wh);
 +			dev_exception_rm(devcgroup, &ex);
  			return 0;
@@ -452,7 +458,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	default:
  		return -EINVAL;
  	}
-@@ -528,17 +535,17 @@ static int __devcgroup_check_permission(
+@@ -547,17 +547,17 @@
  					short type, u32 major, u32 minor,
  					short access)
  {
