@@ -1,0 +1,116 @@
+Index: github/fs/xattr.c
+===================================================================
+--- github.orig/fs/xattr.c	2012-08-21 14:40:53.713479313 -0400
++++ github/fs/xattr.c	2012-08-22 15:01:43.390101095 -0400
+@@ -793,15 +793,6 @@
+ EXPORT_SYMBOL(generic_removexattr);
+ 
+ /*
+- * initialize the simple_xattrs structure
+- */
+-void simple_xattrs_init(struct simple_xattrs *xattrs)
+-{
+-	INIT_LIST_HEAD(&xattrs->head);
+-	spin_lock_init(&xattrs->lock);
+-}
+-
+-/*
+  * Allocate new xattr and copy in the value; but leave the name to callers.
+  */
+ struct simple_xattr *simple_xattr_alloc(const void *value, size_t size)
+@@ -824,22 +815,6 @@
+ }
+ 
+ /*
+- * free all the xattrs
+- */
+-void simple_xattrs_free(struct simple_xattrs *xattrs)
+-{
+-	struct simple_xattr *xattr, *node;
+-
+-	spin_lock(&xattrs->lock);
+-	list_for_each_entry_safe(xattr, node, &xattrs->head, list) {
+-		kfree(xattr->name);
+-		kfree(xattr);
+-	}
+-	INIT_LIST_HEAD(&xattrs->head);
+-	spin_unlock(&xattrs->lock);
+-}
+-
+-/*
+  * xattr GET operation for in-memory/pseudo filesystems
+  */
+ int simple_xattr_get(struct simple_xattrs *xattrs, const char *name,
+@@ -871,17 +846,11 @@
+ {
+ 	struct simple_xattr *xattr;
+ 	struct simple_xattr *new_xattr = NULL;
+-	size_t len;
+ 	int err = 0;
+ 
+ 	/* value == NULL means remove */
+ 	if (value) {
+-		/* wrap around? */
+-		len = sizeof(*new_xattr) + size;
+-		if (len <= sizeof(*new_xattr))
+-			return -ENOMEM;
+-
+-		new_xattr = kmalloc(len, GFP_KERNEL);
++		new_xattr = simple_xattr_alloc(value, size);
+ 		if (!new_xattr)
+ 			return -ENOMEM;
+ 
+@@ -890,9 +859,6 @@
+ 			kfree(new_xattr);
+ 			return -ENOMEM;
+ 		}
+-
+-		new_xattr->size = size;
+-		memcpy(new_xattr->value, value, size);
+ 	}
+ 
+ 	spin_lock(&xattrs->lock);
+Index: github/include/linux/xattr.h
+===================================================================
+--- github.orig/include/linux/xattr.h	2012-08-21 14:40:53.713479313 -0400
++++ github/include/linux/xattr.h	2012-08-23 14:33:51.674727811 -0400
+@@ -59,6 +59,7 @@
+ 
+ #ifdef  __KERNEL__
+ 
++#include <linux/slab.h>
+ #include <linux/types.h>
+ #include <linux/spinlock.h>
+ 
+@@ -110,9 +111,29 @@
+ 	char value[0];
+ };
+ 
+-void simple_xattrs_init(struct simple_xattrs *xattrs);
++/*
++ * initialize the simple_xattrs structure
++ */
++static inline void simple_xattrs_init(struct simple_xattrs *xattrs)
++{
++	INIT_LIST_HEAD(&xattrs->head);
++	spin_lock_init(&xattrs->lock);
++}
++
++/*
++ * free all the xattrs
++ */
++static inline void simple_xattrs_free(struct simple_xattrs *xattrs)
++{
++	struct simple_xattr *xattr, *node;
++
++	list_for_each_entry_safe(xattr, node, &xattrs->head, list) {
++		kfree(xattr->name);
++		kfree(xattr);
++	}
++}
++
+ struct simple_xattr *simple_xattr_alloc(const void *value, size_t size);
+-void simple_xattrs_free(struct simple_xattrs *xattrs);
+ int simple_xattr_get(struct simple_xattrs *xattrs, const char *name,
+ 		     void *buffer, size_t size);
+ int simple_xattr_set(struct simple_xattrs *xattrs, const char *name,
