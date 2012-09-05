@@ -1,11 +1,22 @@
----
- Documentation/filesystems/00-INDEX         |    3 +++
- Documentation/filesystems/simple_xattr.txt |   19 +++++++++++++++++++
- 2 files changed, 22 insertions(+)
+fs: add documentation to simple_xattr functions
 
---- a/Documentation/filesystems/00-INDEX	2012-06-18 14:33:03.926650888 -0400
-+++ b/Documentation/filesystems/00-INDEX	2012-08-30 13:08:23.380958720 -0400
-@@ -96,6 +96,9 @@ seq_file.txt
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Hugh Dickins <hughd@google.com>
+Cc: Hillf Danton <dhillf@gmail.com>
+Cc: Lennart Poettering <lpoetter@redhat.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+
+---
+ Documentation/filesystems/00-INDEX         |    3 ++
+ Documentation/filesystems/simple_xattr.txt |   42 +++++++++++++++++++++++++++++
+ 2 files changed, 45 insertions(+)
+
+Index: github/Documentation/filesystems/00-INDEX
+===================================================================
+--- github.orig/Documentation/filesystems/00-INDEX	2012-09-05 11:51:50.870969722 -0400
++++ github/Documentation/filesystems/00-INDEX	2012-09-05 12:10:46.250211947 -0400
+@@ -96,6 +96,9 @@
  	- how to use the seq_file API
  sharedsubtree.txt
  	- a description of shared subtrees for namespaces.
@@ -15,25 +26,50 @@
  spufs.txt
  	- info and mount options for the SPU filesystem used on Cell.
  sysfs-pci.txt
+Index: github/Documentation/filesystems/simple_xattr.txt
+===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ b/Documentation/filesystems/simple_xattr.txt	2012-08-30 13:17:06.748782896 -0400
-@@ -0,0 +1,19 @@
++++ github/Documentation/filesystems/simple_xattr.txt	2012-09-05 12:10:46.250211947 -0400
+@@ -0,0 +1,42 @@
 +Simple Extended Attributes for Memory Backed Filesystems Interface
-+------------------------------------------------------------------
++==================================================================
 +
++Implements extended attributes storage using kernel memory.  Users of these
++functions are strongly advised against allowing user or any other kind of
++extended attributes that can be manipulated by unprivileged users, since it'd
++be trivial to exhaust kernel memory.
++
++The filesystem implementation is responsible by storing a simple_xattrs
++structure for every directory and file and to implement setxattr() and
++getxattr() calls. Also, setxattr() should filter off by name the unsupported
++types.
 +
 +void simple_xattrs_init(struct simple_xattrs *xattrs)
-+- Initializes a simple_xattrs structure
++- Initializes a pre allocated structure
 +
-+static inline void simple_xattrs_free(struct simple_xattrs *xattrs)
-+struct simple_xattr *simple_xattr_alloc(const void *value, size_t size);
++void simple_xattrs_free(struct simple_xattrs *xattrs)
++- Frees up all the extended attributes and any resources allocated by
++  simple_xattrs_init
++
++struct simple_xattr *simple_xattr_alloc(const void *value, size_t size)
++- Allocates a extended attribute entry
++
++void simple_xattr_list_add(struct simple_xattrs *xattrs,
++                          struct simple_xattr *new_xattr)
++int simple_xattr_remove(struct simple_xattrs *xattrs, const char *name)
++- Adds and removes an extended attribute from the list
++
 +int simple_xattr_get(struct simple_xattrs *xattrs, const char *name,
 +                    void *buffer, size_t size);
++- Returns the value of an extended attribute searching by name
++
 +int simple_xattr_set(struct simple_xattrs *xattrs, const char *name,
 +                    const void *value, size_t size, int flags);
-+int simple_xattr_remove(struct simple_xattrs *xattrs, const char *name);
++- Sets a new value for a given extended attribute. Specifying value as
++  NULL will remove the entry.  If XATTR_CREATE is set in flags, no extended
++  attribute with the same name may exist.  If XATTR_REPLACE is set, the
++  extended attribute has to exist or the operation will fail
++
 +ssize_t simple_xattr_list(struct simple_xattrs *xattrs, char *buffer,
 +                         size_t size);
-+void simple_xattr_list_add(struct simple_xattrs *xattrs,
-+                          struct simple_xattr *new_xattr);
-+
++- Lists the existing extended attributes names in a given buffer
