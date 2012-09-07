@@ -14,8 +14,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/Documentation/filesystems/00-INDEX
 ===================================================================
---- github.orig/Documentation/filesystems/00-INDEX	2012-09-05 11:51:50.870969722 -0400
-+++ github/Documentation/filesystems/00-INDEX	2012-09-05 12:10:46.250211947 -0400
+--- github.orig/Documentation/filesystems/00-INDEX	2012-09-05 14:47:45.916940450 -0400
++++ github/Documentation/filesystems/00-INDEX	2012-09-07 10:23:57.663394282 -0400
 @@ -96,6 +96,9 @@
  	- how to use the seq_file API
  sharedsubtree.txt
@@ -29,7 +29,7 @@ Index: github/Documentation/filesystems/00-INDEX
 Index: github/Documentation/filesystems/simple_xattr.txt
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ github/Documentation/filesystems/simple_xattr.txt	2012-09-05 12:10:46.250211947 -0400
++++ github/Documentation/filesystems/simple_xattr.txt	2012-09-07 10:23:57.663394282 -0400
 @@ -0,0 +1,42 @@
 +Simple Extended Attributes for Memory Backed Filesystems Interface
 +==================================================================

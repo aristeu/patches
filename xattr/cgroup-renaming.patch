@@ -1,3 +1,5 @@
+From: Aristeu Rozanski <aris@redhat.com>
+
 cgroup: rename subsys_bits to subsys_mask
 
 In a previous discussion, Tejun Heo suggested to rename references to
