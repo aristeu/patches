@@ -1,4 +1,7 @@
-fs: add documentation to simple_xattr functions
+fs: add missing documentation to simple_xattr functions
+
+v2: add function documentation instead of adding a separate file under
+    Documentation/
 
 Cc: Li Zefan <lizefan@huawei.com>
 Cc: Tejun Heo <tj@kernel.org>
@@ -8,68 +11,42 @@ Cc: Lennart Poettering <lpoetter@redhat.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- Documentation/filesystems/00-INDEX         |    3 ++
- Documentation/filesystems/simple_xattr.txt |   42 +++++++++++++++++++++++++++++
- 2 files changed, 45 insertions(+)
+ fs/xattr.c |   18 ++++++++++++++++--
+ 1 file changed, 16 insertions(+), 2 deletions(-)
 
-Index: github/Documentation/filesystems/00-INDEX
+Index: github/fs/xattr.c
 ===================================================================
---- github.orig/Documentation/filesystems/00-INDEX	2012-09-05 14:47:45.916940450 -0400
-+++ github/Documentation/filesystems/00-INDEX	2012-09-07 10:23:57.663394282 -0400
-@@ -96,6 +96,9 @@
- 	- how to use the seq_file API
- sharedsubtree.txt
- 	- a description of shared subtrees for namespaces.
-+simple_xattr.txt
-+	- description of extended attributes for memory backed filesystems
-+	  like tmpfs and cgroup filesystem.
- spufs.txt
- 	- info and mount options for the SPU filesystem used on Cell.
- sysfs-pci.txt
-Index: github/Documentation/filesystems/simple_xattr.txt
-===================================================================
---- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ github/Documentation/filesystems/simple_xattr.txt	2012-09-07 10:23:57.663394282 -0400
-@@ -0,0 +1,42 @@
-+Simple Extended Attributes for Memory Backed Filesystems Interface
-+==================================================================
-+
-+Implements extended attributes storage using kernel memory.  Users of these
-+functions are strongly advised against allowing user or any other kind of
-+extended attributes that can be manipulated by unprivileged users, since it'd
-+be trivial to exhaust kernel memory.
-+
-+The filesystem implementation is responsible by storing a simple_xattrs
-+structure for every directory and file and to implement setxattr() and
-+getxattr() calls. Also, setxattr() should filter off by name the unsupported
-+types.
-+
-+void simple_xattrs_init(struct simple_xattrs *xattrs)
-+- Initializes a pre allocated structure
-+
-+void simple_xattrs_free(struct simple_xattrs *xattrs)
-+- Frees up all the extended attributes and any resources allocated by
-+  simple_xattrs_init
-+
-+struct simple_xattr *simple_xattr_alloc(const void *value, size_t size)
-+- Allocates a extended attribute entry
-+
-+void simple_xattr_list_add(struct simple_xattrs *xattrs,
-+                          struct simple_xattr *new_xattr)
-+int simple_xattr_remove(struct simple_xattrs *xattrs, const char *name)
-+- Adds and removes an extended attribute from the list
-+
-+int simple_xattr_get(struct simple_xattrs *xattrs, const char *name,
-+                    void *buffer, size_t size);
-+- Returns the value of an extended attribute searching by name
-+
-+int simple_xattr_set(struct simple_xattrs *xattrs, const char *name,
-+                    const void *value, size_t size, int flags);
-+- Sets a new value for a given extended attribute. Specifying value as
-+  NULL will remove the entry.  If XATTR_CREATE is set in flags, no extended
-+  attribute with the same name may exist.  If XATTR_REPLACE is set, the
-+  extended attribute has to exist or the operation will fail
-+
-+ssize_t simple_xattr_list(struct simple_xattrs *xattrs, char *buffer,
-+                         size_t size);
-+- Lists the existing extended attributes names in a given buffer
+--- github.orig/fs/xattr.c	2012-09-11 14:48:12.648072176 -0400
++++ github/fs/xattr.c	2012-09-11 15:33:14.502770685 -0400
+@@ -892,8 +892,19 @@
+ 
+ }
+ 
+-/*
+- * xattr SET operation for in-memory/pseudo filesystems
++/**
++ * simple_xattr_set: xattr SET operation for in-memory/pseudo filesystems
++ * @xattrs: simple_xattr list
++ * @name: name of the new extended attribute
++ * @value: value of the new extended attribute. If NULL, will remove the
++ *	   attribute
++ * @flags: if XATTR_CREATE is set, no already existing extended attribute may
++ *	   exist. If XATTR_REPLACE is set, the extended attribute should exist.
++ *
++ * returns -ENOMEM for allocation failures, -EEXIST in case XATTR_CREATE is
++ *	   set in flags and an extended attribute with the same name exists,
++ *	   -ENODATA if XATTR_REPLACE is set in flags but no entry with the
++ *	   specified name exists.
+  */
+ int simple_xattr_set(struct simple_xattrs *xattrs, const char *name,
+ 		     const void *value, size_t size, int flags)
+@@ -950,6 +961,9 @@
+ 	return used;
+ }
+ 
++/*
++ * Adds an extended attribute to the list
++ */
+ void simple_xattr_list_add(struct simple_xattrs *xattrs,
+ 			   struct simple_xattr *new_xattr)
+ {

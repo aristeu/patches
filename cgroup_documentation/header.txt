@@ -3,6 +3,8 @@ cgroups: add documentation on extended attributes and simple_xattr functions
 These patches add documentation on the new functions and current specific
 cgroup usage.
 
+v2: include Li Zefan's requested changes
+
 Cc: Li Zefan <lizefan@huawei.com>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Hugh Dickins <hughd@google.com>
