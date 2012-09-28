@@ -1,0 +1,133 @@
+---
+ security/device_cgroup.c |  106 ++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 95 insertions(+), 11 deletions(-)
+
+--- github.orig/security/device_cgroup.c	2012-09-26 15:56:07.000000000 -0400
++++ github/security/device_cgroup.c	2012-09-26 16:35:31.402791648 -0400
+@@ -194,6 +194,16 @@ static int dev_exception_add(struct dev_
+ 	return rc;
+ }
+ 
++static void __dev_exception_clean(struct list_head *exceptions)
++{
++	struct dev_exception_item *ex, *tmp;
++
++	list_for_each_entry_safe(ex, tmp, exceptions, list) {
++		list_del(&ex->list);
++		kfree(ex);
++	}
++}
++
+ /**
+  * dev_exception_clean - frees all entries of the exception list
+  * @dev_cgroup: dev_cgroup with the exception list to be cleaned
+@@ -202,17 +212,8 @@ static int dev_exception_add(struct dev_
+  */
+ static void dev_exception_clean(struct dev_cgroup *dev_cgroup)
+ {
+-	struct dev_exception_item *ex, *tmp;
+-
+-	list_for_each_entry_safe(ex, tmp, &dev_cgroup->exceptions, list) {
+-		list_del(&ex->list);
+-		kfree(ex);
+-	}
+-	list_for_each_entry_safe(ex, tmp, &dev_cgroup->local.exceptions,
+-				 list) {
+-		list_del(&ex->list);
+-		kfree(ex);
+-	}
++	__dev_exception_clean(&dev_cgroup->exceptions);
++	__dev_exception_clean(&dev_cgroup->local.exceptions);
+ }
+ 
+ /*
+@@ -439,6 +440,89 @@ static int may_allow_all(struct dev_cgro
+ 	return parent->behavior == DEVCG_ALLOW;
+ }
+ 
++/* called with croup_mutex held */
++static int __propagate_exception(struct cgroup *cgroup, void *data)
++{
++	return 0;
++}
++
++/**
++ * propagate_exception - propagates a new exception to the children
++ * @devcg: device cgroup that added a new exception
++ * @ex: new exception
++ *
++ * returns: 0 in case of success, != 0 in case of error
++ */
++static int propagate_exception(struct dev_cgroup *devcg,
++			       struct dev_exception_item *ex)
++{
++	struct cgroup *root = devcg->css.cgroup;
++
++	return walk_cgroup_tree_from(root, __propagate_exception,
++				     cgroup_visitor_nop, devcg);
++}
++
++/*
++ * 1) allow, allow -> deny, deny (reset ->local.)
++ * 2) alow, deny -> deny, deny
++ */
++/*
++ * behavior
++ * 1) allow -> deny: flush exceptions
++ * 2) deny -> allow: only if local.behavior is not deny
++ *
++ * -> apply change, try to apply local settings checking for permissions
++ * -> in case local behavior can't be used, flush behavior and exceptions
++ * -> update local exceptions based on the result of permission checking
++ */
++
++/* called with croup_mutex held */
++static int __propagate_behavior(struct cgroup *cgroup, void *data)
++{
++	struct dev_cgroup *devcg = data, *cur = cgroup_to_devcgroup(cgroup);
++	struct dev_exception_item *ex;
++
++	/* first copy parent's state */
++	cur->behavior = devcg->behavior;
++	__dev_exception_clean(&cur->exceptions);
++	rc = dev_exceptions_copy(&cur->exceptions, &devcg->exceptions);
++	if (rc) {
++		cur->behavior = DEVCG_DENY;
++		return rc;
++	}
++
++	if (cur->local.behavior != DEVCG_NONE &&
++	    cur->behavior != cur->local.behavior) {
++		if (cur->local.behavior == DEVCG_ALLOW) {
++			cur->local.behavior = DEVCG_NONE;
++			__dev_exception_clean(&cur->local.exceptions);
++		} else {
++			cur->behavior = DEVCG_DENY;
++			list_for_each(&cur->local.exceptions, ex, list) {
++
++			}
++		}
++	}
++/* XXX - cases when local.behavior is not set but there're local exceptions */
++
++
++	return 0;
++}
++
++/**
++ * propagate_behavior - propagates a change in the behavior to the children
++ * @devcg: device cgroup that changed behavior
++ *
++ * returns: 0 in case of success, != 0 in case of error
++ */
++static int propagate_behavior(struct dev_cgroup *devcg)
++{
++	struct cgroup *root = devcg->css.cgroup;
++
++	return walk_cgroup_tree_from(root, __propagate_behavior,
++				     cgroup_visitor_nop, devcg);
++}
++
+ /*
+  * Modify the exception list using allow/deny rules.
+  * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD

@@ -1,0 +1,15 @@
+---
+ fs/xattr.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- github.orig/fs/xattr.c	2012-09-12 09:57:35.000000000 -0400
++++ github/fs/xattr.c	2012-09-12 09:58:25.619387047 -0400
+@@ -845,7 +845,7 @@ static int __simple_xattr_set(struct sim
+ 			      const void *value, size_t size, int flags)
+ {
+ 	struct simple_xattr *xattr;
+-	struct simple_xattr *new_xattr = NULL;
++	struct simple_xattr *uninitialized_var(new_xattr);
+ 	int err = 0;
+ 
+ 	/* value == NULL means remove */

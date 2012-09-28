@@ -1,0 +1,72 @@
+---
+ security/device_cgroup.c |   24 ++++++++++++++++++++++--
+ 1 file changed, 22 insertions(+), 2 deletions(-)
+
+--- github.orig/security/device_cgroup.c	2012-09-13 11:20:50.000000000 -0400
++++ github/security/device_cgroup.c	2012-09-14 10:42:56.918915018 -0400
+@@ -360,6 +360,7 @@ 		if (ex->minor != ~0 && ex->minor != re
+ 	return 0;
+ }
+ 
++#define devcg_parent(x) ((x)->css.cgroup->parent)
+ /*
+  * parent_has_perm:
+  * when adding a new allow rule to a device exception list, the rule
+@@ -368,7 +369,7 @@ 	return 0;
+ static int parent_has_perm(struct dev_cgroup *childcg,
+ 				  struct dev_exception_item *ex)
+ {
+-	struct cgroup *pcg = childcg->css.cgroup->parent;
++	struct cgroup *pcg = devcg_parent(childcg);
+ 	struct dev_cgroup *parent;
+ 
+ 	if (!pcg)
+@@ -377,6 +378,21 @@ static int parent_has_perm(struct dev_cg
+ 	return may_access(parent, ex);
+ }
+ 
++static void propagate_behavior(struct dev_cgroup *devcgroup)
++{
++
++}
++
++static void propagate_exception(struct dev_cgroup *devcgroup,
++				struct dev_exception_item ex)
++{
++	struct cgroup *cg;
++
++	list_for_each(cg, struct cgroup, children) {
++
++	}
++}
++
+ /*
+  * Modify the exception list using allow/deny rules.
+  * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
+@@ -408,7 +424,7 @@ 	memset(&ex, 0, sizeof(ex));
+ 	case 'a':
+ 		switch (filetype) {
+ 		case DEVCG_ALLOW:
+-			if (!parent_has_perm(devcgroup, &ex))
++			if (devcg_parent(devcgroup)->behavior != DEVCG_DEFAULT_ALLOW)
+ 				return -EPERM;
+ 			dev_exception_clean(devcgroup);
+ 			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
+@@ -416,6 +432,8 @@ 	memset(&ex, 0, sizeof(ex));
+ 		case DEVCG_DENY:
+ 			dev_exception_clean(devcgroup);
+ 			devcgroup->behavior = DEVCG_DEFAULT_DENY;
++			/* we only propagate down the removal of privileges */
++			propagate_behavior(devcgroup);
+ 			break;
+ 		default:
+ 			return -EINVAL;
+@@ -519,6 +537,8 @@ 			return 0;
+ 			dev_exception_rm(devcgroup, &ex);
+ 			return 0;
+ 		}
++		/* we only propagate down the removal of privileges */
++		propagate_exception(devcgroup, &ex);
+ 		return dev_exception_add(devcgroup, &ex);
+ 	default:
+ 		return -EINVAL;

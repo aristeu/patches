@@ -1,0 +1,88 @@
+---
+ include/linux/cgroup.h |    6 ++++
+ kernel/cgroup.c        |   59 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 65 insertions(+)
+
+--- github.orig/include/linux/cgroup.h	2012-09-26 15:07:26.438053087 -0400
++++ github/include/linux/cgroup.h	2012-09-26 15:56:11.956977773 -0400
+@@ -435,6 +435,12 @@ int cgroup_is_descendant(const struct cg
+ void cgroup_exclude_rmdir(struct cgroup_subsys_state *css);
+ void cgroup_release_and_wakeup_rmdir(struct cgroup_subsys_state *css);
+ 
++/* Used to walk the cgroup children respecting the hierarchy */
++typedef int (*cgroup_visitor)(struct cgroup *parent, void *data);
++int walk_cgroup_tree_from(struct cgroup *from, cgroup_visitor down,
++			  cgroup_visitor up, void *data);
++int cgroup_visitor_nop(struct cgroup *cgroup, void *data);
++
+ /*
+  * Control Group taskset, used to pass around set of tasks to cgroup_subsys
+  * methods.
+--- github.orig/kernel/cgroup.c	2012-09-26 15:07:26.450925457 -0400
++++ github/kernel/cgroup.c	2012-09-26 15:56:11.969978091 -0400
+@@ -5331,6 +5331,65 @@ 	if (id < 0 || id >= CGROUP_SUBSYS_COUNT
+ 	return css ? css : ERR_PTR(-ENOENT);
+ }
+ 
++/*
++ * walk_cgroup_tree_from - iterate cgroup tree starting at *from,
++ * calling @down when first entering a node and @up when leaving
++ * it for the final time.
++ * Holds cgroup_mutex.
++ *
++ * @from: cgroup to start from
++ * @down: function called when entering a node
++ * @up: function called when leaving a node
++ * @data: private data to be passed to both callbacks
++ *
++ * returns 0 in case of success, !=0 in case one of the callbacks returned
++ * error
++ */
++int walk_cgroup_tree_from(struct cgroup *from, cgroup_visitor down,
++			  cgroup_visitor up, void *data)
++{
++	struct cgroup *parent, *child;
++	int ret;
++
++	parent = from;
++
++	cgroup_lock();
++
++down:
++	ret = (*down)(parent, data);
++	if (ret)
++		goto out;
++	list_for_each_entry(child, &parent->children, sibling) {
++		parent = child;
++		goto down;
++
++up:
++		continue;
++	}
++	ret = (*up)(parent, data);
++	if (ret || parent == from)
++		goto out;
++
++	child = parent;
++	parent = parent->parent;
++	if (parent)
++		goto up;
++out:
++	cgroup_unlock();
++
++	return ret;
++}
++
++EXPORT_SYMBOL_GPL(walk_cgroup_tree_from);
++
++/* cgroup_visitor No-Op to be used with walk_cgroup_tree_from */
++int cgroup_visitor_nop(struct cgroup *cgroup, void *data)
++{
++	return 0;
++}
++
++EXPORT_SYMBOL_GPL(cgroup_visitor_nop);
++
+ #ifdef CONFIG_CGROUP_DEBUG
+ static struct cgroup_subsys_state *debug_create(struct cgroup *cont)
+ {

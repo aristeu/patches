@@ -1,0 +1,73 @@
+---
+ security/device_cgroup.c |   18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+--- github.orig/security/device_cgroup.c	2012-09-26 15:55:32.572002344 -0400
++++ github/security/device_cgroup.c	2012-09-26 15:55:35.702790316 -0400
+@@ -102,7 +102,7 @@ free_and_exit:
+ /*
+  * called under devcgroup_mutex
+  */
+-static int dev_exception_add(struct dev_cgroup *dev_cgroup,
++static int dev_exception_add(struct list_head *exceptions,
+ 			     struct dev_exception_item *ex)
+ {
+ 	struct dev_exception_item *excopy, *walk;
+@@ -111,7 +111,7 @@ static int dev_exception_add(struct dev_
+ 	if (!excopy)
+ 		return -ENOMEM;
+ 
+-	list_for_each_entry(walk, &dev_cgroup->exceptions, list) {
++	list_for_each_entry(walk, exceptions, list) {
+ 		if (walk->type != ex->type)
+ 			continue;
+ 		if (walk->major != ex->major)
+@@ -125,19 +125,19 @@ static int dev_exception_add(struct dev_
+ 	}
+ 
+ 	if (excopy != NULL)
+-		list_add_tail_rcu(&excopy->list, &dev_cgroup->exceptions);
++		list_add_tail_rcu(&excopy->list, exceptions);
+ 	return 0;
+ }
+ 
+ /*
+  * called under devcgroup_mutex
+  */
+-static void dev_exception_rm(struct dev_cgroup *dev_cgroup,
++static void dev_exception_rm(struct list_head *exceptions,
+ 			     struct dev_exception_item *ex)
+ {
+ 	struct dev_exception_item *walk, *tmp;
+ 
+-	list_for_each_entry_safe(walk, tmp, &dev_cgroup->exceptions, list) {
++	list_for_each_entry_safe(walk, tmp, exceptions, list) {
+ 		if (walk->type != ex->type)
+ 			continue;
+ 		if (walk->major != ex->major)
+@@ -525,10 +525,10 @@ 		case '\0':
+ 		 * don't want to break compatibility
+ 		 */
+ 		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
+-			dev_exception_rm(devcgroup, &ex);
++			dev_exception_rm(&devcgroup->exceptions, &ex);
+ 			return 0;
+ 		}
+-		return dev_exception_add(devcgroup, &ex);
++		return dev_exception_add(&devcgroup->exceptions, &ex);
+ 	case DEVCG_DENY:
+ 		/*
+ 		 * If the default policy is to deny by default, try to remove
+@@ -536,10 +536,10 @@ 			return 0;
+ 		 * don't want to break compatibility
+ 		 */
+ 		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {
+-			dev_exception_rm(devcgroup, &ex);
++			dev_exception_rm(&devcgroup->exceptions, &ex);
+ 			return 0;
+ 		}
+-		return dev_exception_add(devcgroup, &ex);
++		return dev_exception_add(&devcgroup->exceptions, &ex);
+ 	default:
+ 		return -EINVAL;
+ 	}
