@@ -1,9 +1,9 @@
 ---
- security/device_cgroup.c |  106 ++++++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 95 insertions(+), 11 deletions(-)
+ security/device_cgroup.c |  196 ++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 177 insertions(+), 19 deletions(-)
 
---- github.orig/security/device_cgroup.c	2012-09-26 15:56:07.000000000 -0400
-+++ github/security/device_cgroup.c	2012-09-26 16:35:31.402791648 -0400
+--- github.orig/security/device_cgroup.c	2012-10-01 14:25:55.211228262 -0400
++++ github/security/device_cgroup.c	2012-10-02 17:08:03.383171880 -0400
 @@ -194,6 +194,16 @@ static int dev_exception_add(struct dev_
  	return rc;
  }
@@ -41,75 +41,132 @@
  }
  
  /*
-@@ -439,6 +440,89 @@ static int may_allow_all(struct dev_cgro
- 	return parent->behavior == DEVCG_ALLOW;
- }
- 
-+/* called with croup_mutex held */
-+static int __propagate_exception(struct cgroup *cgroup, void *data)
-+{
-+	return 0;
+@@ -433,12 +434,159 @@  * returns: != 0 in case it's allowed, 0
+  */
+ static int may_allow_all(struct dev_cgroup *devcg)
+ {
+-	struct cgroup *pcg = childcg->css.cgroup->parent;
++	struct cgroup *pcg = devcg->css.cgroup->parent;
++	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
++
++	return parent->behavior == DEVCG_DEFAULT_ALLOW;
 +}
 +
 +/**
-+ * propagate_exception - propagates a new exception to the children
-+ * @devcg: device cgroup that added a new exception
-+ * @ex: new exception
-+ *
-+ * returns: 0 in case of success, != 0 in case of error
++ * __revalidate_exceptions - walks through the exception list and revalidates
++ * 			     the exceptions based on parents' behavior and
++ * 			     exceptions. Called with devcgroup_mutex held.
++ * @devcg: cgroup which exceptions will be checked
 + */
-+static int propagate_exception(struct dev_cgroup *devcg,
-+			       struct dev_exception_item *ex)
++static void __revalidate_exceptions(struct dev_cgroup *devcg)
 +{
-+	struct cgroup *root = devcg->css.cgroup;
++	struct cgroup *pcg = devcg->css.cgroup->parent;
++	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
++	struct dev_exception_item *ex;
++	struct list_head *this, *tmp;
 +
-+	return walk_cgroup_tree_from(root, __propagate_exception,
-+				     cgroup_visitor_nop, devcg);
++	list_for_each_safe(this, tmp, &devcg->local.exceptions) {
++		ex = container_of(this, struct dev_exception_item, list);
++		if (!may_access(parent, ex)) {
++			list_del(this);
++			kfree(ex);
++		}
++	}
 +}
 +
-+/*
-+ * 1) allow, allow -> deny, deny (reset ->local.)
-+ * 2) alow, deny -> deny, deny
++/**
++ * __revalidate_exceptions_reverse - walks through the exception list and
++ * 				     revalidates the exceptions based on
++ * 				     parents' behavior and exceptions.
++ * 				     Used when the parent has a different
++ * 				     behavior.
++ * 				     Called with devcgroup_mutex held.
++ * @devcg: cgroup which exceptions will be checked
 + */
-+/*
-+ * behavior
-+ * 1) allow -> deny: flush exceptions
-+ * 2) deny -> allow: only if local.behavior is not deny
-+ *
-+ * -> apply change, try to apply local settings checking for permissions
-+ * -> in case local behavior can't be used, flush behavior and exceptions
-+ * -> update local exceptions based on the result of permission checking
-+ */
-+
-+/* called with croup_mutex held */
++static void __revalidate_exceptions_reverse(struct dev_cgroup *devcg)
++{
++	struct cgroup *pcg = devcg->css.cgroup->parent;
+ 	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
++	struct dev_exception_item *ex;
++	struct list_head *this, *tmp;
+ 
+-	return parent->behavior == DEVCG_ALLOW;
++	list_for_each_safe(this, tmp, &devcg->local.exceptions) {
++		ex = container_of(this, struct dev_exception_item, list);
++		/*
++		 * this is a reverse match. since the only valid case is to
++		 * have parent->behavior != devcg->behavior when
++		 * devcg->behavior == DEVCG_DEFAULT_DENY, an exception in
++		 * devcg (allowing one or more devices) must not match any
++		 * of the entries of parent's exceptions (denying one or more
++		 * devices)
++		 */
++		if (may_access(parent, ex)) {
++			list_del(this);
++			kfree(ex);
++		}
++	}
+ }
+ 
++/* called with devcgroup_mutex held, by walk_cgroup_tree_from() */
 +static int __propagate_behavior(struct cgroup *cgroup, void *data)
 +{
-+	struct dev_cgroup *devcg = data, *cur = cgroup_to_devcgroup(cgroup);
-+	struct dev_exception_item *ex;
++	struct cgroup *pcg = cgroup->parent;
++	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
++	struct dev_cgroup *devcg = cgroup_to_devcgroup(cgroup);
++	int rc;
 +
 +	/* first copy parent's state */
-+	cur->behavior = devcg->behavior;
-+	__dev_exception_clean(&cur->exceptions);
-+	rc = dev_exceptions_copy(&cur->exceptions, &devcg->exceptions);
++	devcg->behavior = parent->behavior;
++	__dev_exception_clean(&devcg->exceptions);
++	rc = dev_exceptions_copy(&devcg->exceptions, &parent->exceptions);
 +	if (rc) {
-+		cur->behavior = DEVCG_DENY;
++		devcg->behavior = DEVCG_DEFAULT_DENY;
 +		return rc;
 +	}
 +
-+	if (cur->local.behavior != DEVCG_NONE &&
-+	    cur->behavior != cur->local.behavior) {
-+		if (cur->local.behavior == DEVCG_ALLOW) {
-+			cur->local.behavior = DEVCG_NONE;
-+			__dev_exception_clean(&cur->local.exceptions);
++	/* now to evaluate local behavior and exceptions */
++	if (devcg->local.behavior == DEVCG_DEFAULT_NONE)
++		__dev_exception_clean(&devcg->local.exceptions);
++	else if (devcg->behavior != devcg->local.behavior) {
++		/* if the parent changed to DENY, ALLOW is not possible */
++		if (devcg->local.behavior == DEVCG_DEFAULT_ALLOW) {
++			devcg->local.behavior = DEVCG_DEFAULT_NONE;
++			__dev_exception_clean(&devcg->local.exceptions);
 +		} else {
-+			cur->behavior = DEVCG_DENY;
-+			list_for_each(&cur->local.exceptions, ex, list) {
-+
-+			}
++			devcg->behavior = DEVCG_DEFAULT_DENY;
++			__revalidate_exceptions_reverse(devcg);
++			rc = dev_exceptions_copy(&devcg->exceptions,
++						 &devcg->local.exceptions);
 +		}
++	} else {
++		/*
++		 * parent's behavior changed to the local setting, we can
++		 * reuse the exceptions
++		 */
++		__revalidate_exceptions_reverse(devcg);
++		rc = dev_exceptions_copy(&devcg->exceptions,
++					 &devcg->local.exceptions);
 +	}
-+/* XXX - cases when local.behavior is not set but there're local exceptions */
 +
++	return rc;
++}
++
++/* called with devcroup_mutex held */
++static int __propagate_exception(struct cgroup *cgroup, void *data)
++{
++	struct cgroup *pcg = cgroup->parent;
++	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
++	struct dev_cgroup *devcg = cgroup_to_devcgroup(cgroup);
++
++	if (devcg->behavior != parent->behavior) {
++		/* we never give more permissions to the child */
++		WARN_ONCE(devcg->behavior == DEVCG_DEFAULT_ALLOW,
++			  "devcg: parent/child behavior is inconsistent");
++		__revalidate_exceptions_reverse(devcg);
++	} else {
++		__revalidate_exceptions(devcg);
++	}
 +
 +	return 0;
 +}
@@ -125,9 +182,77 @@
 +	struct cgroup *root = devcg->css.cgroup;
 +
 +	return walk_cgroup_tree_from(root, __propagate_behavior,
-+				     cgroup_visitor_nop, devcg);
++				     cgroup_visitor_nop, NULL);
 +}
++
++/**
++ * propagate_exception - propagates a new exception to the children
++ * @devcg: device cgroup that added a new exception
++ *
++ * returns: 0 in case of success, != 0 in case of error
++ */
++static int propagate_exception(struct dev_cgroup *devcg)
++{
++	struct cgroup *root = devcg->css.cgroup;
++
++	return walk_cgroup_tree_from(root, __propagate_exception,
++				     cgroup_visitor_nop, NULL);
++}
++
 +
  /*
   * Modify the exception list using allow/deny rules.
   * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
+@@ -481,16 +629,18 @@ 	memset(&ex, 0, sizeof(ex));
+ 				return rc;
+ 			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
+ 			devcgroup->local.behavior = DEVCG_DEFAULT_ALLOW;
++			rc = propagate_behavior(devcgroup);
+ 			break;
+ 		case DEVCG_DENY:
+ 			dev_exception_clean(devcgroup);
+ 			devcgroup->behavior = DEVCG_DEFAULT_DENY;
+ 			devcgroup->local.behavior = DEVCG_DEFAULT_DENY;
++			rc = propagate_behavior(devcgroup);
+ 			break;
+ 		default:
+-			return -EINVAL;
++			rc = -EINVAL;
+ 		}
+-		return 0;
++		return rc;
+ 	case 'b':
+ 		ex.type = DEV_BLOCK;
+ 		break;
+@@ -578,7 +728,11 @@ 		case '\0':
+ 			dev_exception_rm(devcgroup, &ex);
+ 			return 0;
+ 		}
+-		return dev_exception_add(devcgroup, &ex);
++		rc = dev_exception_add(devcgroup, &ex);
++		if (rc)
++			return rc;
++		rc = propagate_exception(devcgroup);
++		break;
+ 	case DEVCG_DENY:
+ 		/*
+ 		 * If the default policy is to deny by default, try to remove
+@@ -589,11 +743,15 @@ 			return 0;
+ 			dev_exception_rm(devcgroup, &ex);
+ 			return 0;
+ 		}
+-		return dev_exception_add(devcgroup, &ex);
++		rc = dev_exception_add(devcgroup, &ex);
++		if (rc)
++			return rc;
++		rc = propagate_exception(devcgroup);
++		break;
+ 	default:
+-		return -EINVAL;
++		rc = -EINVAL;
+ 	}
+-	return 0;
++	return rc;
+ }
+ 
+ static int devcgroup_access_write(struct cgroup *cgrp, struct cftype *cft,
