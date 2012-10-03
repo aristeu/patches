@@ -74,8 +74,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-08-21 10:50:37.526892088 -0400
-+++ github/security/device_cgroup.c	2012-08-21 10:50:48.967215436 -0400
+--- github.orig/security/device_cgroup.c	2012-10-03 11:43:00.000000000 -0400
++++ github/security/device_cgroup.c	2012-10-03 11:43:32.805781074 -0400
 @@ -99,7 +99,6 @@
  	return -ENOMEM;
  }
@@ -277,8 +277,8 @@ Index: github/security/device_cgroup.c
  	default:
  		return -EINVAL;
  	}
-@@ -479,73 +517,71 @@
- 	.base_cftypes = dev_cgroup_files,
+@@ -488,73 +526,71 @@
+ 	.broken_hierarchy = true,
  };
  
 -int __devcgroup_inode_permission(struct inode *inode, int mask)

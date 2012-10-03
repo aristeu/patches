@@ -10,4 +10,3 @@ dev_exception_helpers.patch
 hierarchy.patch
 generalize_walk_tg_tree_from.patch
 propagate.patch
-propagate_deny_rules.patch
