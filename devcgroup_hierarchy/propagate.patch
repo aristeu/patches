@@ -2,9 +2,11 @@
  security/device_cgroup.c |  196 ++++++++++++++++++++++++++++++++++++++++++-----
  1 file changed, 177 insertions(+), 19 deletions(-)
 
---- github.orig/security/device_cgroup.c	2012-10-01 14:25:55.211228262 -0400
-+++ github/security/device_cgroup.c	2012-10-02 17:08:03.383171880 -0400
-@@ -194,6 +194,16 @@ static int dev_exception_add(struct dev_
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-10-03 15:22:16.545732662 -0400
++++ github/security/device_cgroup.c	2012-10-03 16:44:57.376340276 -0400
+@@ -194,6 +194,16 @@
  	return rc;
  }
  
@@ -21,7 +23,7 @@
  /**
   * dev_exception_clean - frees all entries of the exception list
   * @dev_cgroup: dev_cgroup with the exception list to be cleaned
-@@ -202,17 +212,8 @@ static int dev_exception_add(struct dev_
+@@ -202,17 +212,8 @@
   */
  static void dev_exception_clean(struct dev_cgroup *dev_cgroup)
  {
@@ -41,17 +43,18 @@
  }
  
  /*
-@@ -433,12 +434,159 @@  * returns: != 0 in case it's allowed, 0
+@@ -433,12 +434,172 @@
   */
  static int may_allow_all(struct dev_cgroup *devcg)
  {
 -	struct cgroup *pcg = childcg->css.cgroup->parent;
 +	struct cgroup *pcg = devcg->css.cgroup->parent;
-+	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
-+
+ 	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
+ 
+-	return parent->behavior == DEVCG_ALLOW;
 +	return parent->behavior == DEVCG_DEFAULT_ALLOW;
-+}
-+
+ }
+ 
 +/**
 + * __revalidate_exceptions - walks through the exception list and revalidates
 + * 			     the exceptions based on parents' behavior and
@@ -86,35 +89,30 @@
 +static void __revalidate_exceptions_reverse(struct dev_cgroup *devcg)
 +{
 +	struct cgroup *pcg = devcg->css.cgroup->parent;
- 	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
++	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
 +	struct dev_exception_item *ex;
 +	struct list_head *this, *tmp;
- 
--	return parent->behavior == DEVCG_ALLOW;
++
 +	list_for_each_safe(this, tmp, &devcg->local.exceptions) {
 +		ex = container_of(this, struct dev_exception_item, list);
-+		/*
-+		 * this is a reverse match. since the only valid case is to
-+		 * have parent->behavior != devcg->behavior when
-+		 * devcg->behavior == DEVCG_DEFAULT_DENY, an exception in
-+		 * devcg (allowing one or more devices) must not match any
-+		 * of the entries of parent's exceptions (denying one or more
-+		 * devices)
-+		 */
-+		if (may_access(parent, ex)) {
++		if (!may_access_reverse(parent, ex)) {
 +			list_del(this);
 +			kfree(ex);
 +		}
 +	}
- }
- 
++}
++
 +/* called with devcgroup_mutex held, by walk_cgroup_tree_from() */
 +static int __propagate_behavior(struct cgroup *cgroup, void *data)
 +{
 +	struct cgroup *pcg = cgroup->parent;
-+	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
++	struct dev_cgroup *root, *parent = cgroup_to_devcgroup(pcg);
 +	struct dev_cgroup *devcg = cgroup_to_devcgroup(cgroup);
 +	int rc;
++
++	root = data;
++	if (devcg == root)
++		return 0;
 +
 +	/* first copy parent's state */
 +	devcg->behavior = parent->behavior;
@@ -156,8 +154,22 @@
 +static int __propagate_exception(struct cgroup *cgroup, void *data)
 +{
 +	struct cgroup *pcg = cgroup->parent;
-+	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
++	struct dev_cgroup *root, *parent = cgroup_to_devcgroup(pcg);
 +	struct dev_cgroup *devcg = cgroup_to_devcgroup(cgroup);
++	int rc;
++
++	root = data;
++	if (devcg == root)
++		return 0;
++
++	/* first copy parent's state */
++	devcg->behavior = parent->behavior;
++	__dev_exception_clean(&devcg->exceptions);
++	rc = dev_exceptions_copy(&devcg->exceptions, &parent->exceptions);
++	if (rc) {
++		devcg->behavior = DEVCG_DEFAULT_DENY;
++		return rc;
++	}
 +
 +	if (devcg->behavior != parent->behavior) {
 +		/* we never give more permissions to the child */
@@ -168,7 +180,10 @@
 +		__revalidate_exceptions(devcg);
 +	}
 +
-+	return 0;
++	rc = dev_exceptions_copy(&devcg->exceptions,
++				 &devcg->local.exceptions);
++
++	return rc;
 +}
 +
 +/**
@@ -182,7 +197,7 @@
 +	struct cgroup *root = devcg->css.cgroup;
 +
 +	return walk_cgroup_tree_from(root, __propagate_behavior,
-+				     cgroup_visitor_nop, NULL);
++				     cgroup_visitor_nop, devcg);
 +}
 +
 +/**
@@ -196,14 +211,14 @@
 +	struct cgroup *root = devcg->css.cgroup;
 +
 +	return walk_cgroup_tree_from(root, __propagate_exception,
-+				     cgroup_visitor_nop, NULL);
++				     cgroup_visitor_nop, devcg);
 +}
 +
 +
  /*
   * Modify the exception list using allow/deny rules.
   * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
-@@ -481,16 +629,18 @@ 	memset(&ex, 0, sizeof(ex));
+@@ -481,16 +642,18 @@
  				return rc;
  			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
  			devcgroup->local.behavior = DEVCG_DEFAULT_ALLOW;
@@ -224,7 +239,7 @@
  	case 'b':
  		ex.type = DEV_BLOCK;
  		break;
-@@ -578,7 +728,11 @@ 		case '\0':
+@@ -578,7 +741,11 @@
  			dev_exception_rm(devcgroup, &ex);
  			return 0;
  		}
@@ -237,7 +252,7 @@
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -589,11 +743,15 @@ 			return 0;
+@@ -589,11 +756,15 @@
  			dev_exception_rm(devcgroup, &ex);
  			return 0;
  		}
