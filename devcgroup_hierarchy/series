@@ -9,4 +9,5 @@ fix-perm.patch
 dev_exception_helpers.patch
 hierarchy.patch
 generalize_walk_tg_tree_from.patch
+strengthen-may_access.patch
 propagate.patch
