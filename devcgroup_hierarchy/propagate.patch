@@ -42,8 +42,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 16:53:21.963343115 -0400
-+++ github/security/device_cgroup.c	2012-10-16 16:56:21.476235765 -0400
+--- github.orig/security/device_cgroup.c	2012-10-16 17:12:38.098957143 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:12:38.350964095 -0400
 @@ -194,6 +194,16 @@
  	return rc;
  }
@@ -81,7 +81,7 @@ Index: github/security/device_cgroup.c
  }
  
  /*
-@@ -445,12 +446,147 @@
+@@ -412,12 +413,147 @@
   */
  static int may_allow_all(struct dev_cgroup *devcg)
  {
@@ -231,7 +231,7 @@ Index: github/security/device_cgroup.c
  /*
   * Modify the exception list using allow/deny rules.
   * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
-@@ -493,16 +629,18 @@
+@@ -460,16 +596,18 @@
  				return rc;
  			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
  			devcgroup->local.behavior = DEVCG_DEFAULT_ALLOW;
@@ -252,7 +252,7 @@ Index: github/security/device_cgroup.c
  	case 'b':
  		ex.type = DEV_BLOCK;
  		break;
-@@ -590,7 +728,10 @@
+@@ -557,7 +695,10 @@
  			dev_exception_rm(devcgroup, &ex);
  			return 0;
  		}
@@ -264,7 +264,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -601,11 +742,16 @@
+@@ -568,11 +709,16 @@
  			dev_exception_rm(devcgroup, &ex);
  			return 0;
  		}

@@ -17,8 +17,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-15 15:43:48.651193929 -0400
-+++ github/security/device_cgroup.c	2012-10-15 15:43:48.899200350 -0400
+--- github.orig/security/device_cgroup.c	2012-10-16 17:12:37.326935839 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:12:37.578942789 -0400
 @@ -39,13 +39,27 @@
  	struct rcu_head rcu;
  };
@@ -157,7 +157,7 @@ Index: github/security/device_cgroup.c
  	parent_cgroup = cgroup->parent;
  
  	if (parent_cgroup == NULL)
-@@ -432,10 +480,12 @@
+@@ -399,10 +447,12 @@
  			if (rc)
  				return rc;
  			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
@@ -170,7 +170,7 @@ Index: github/security/device_cgroup.c
  			break;
  		default:
  			return -EINVAL;
-@@ -525,10 +575,10 @@
+@@ -492,10 +542,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -183,7 +183,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -536,10 +586,10 @@
+@@ -503,10 +553,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {

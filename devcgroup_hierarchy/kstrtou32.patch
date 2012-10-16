@@ -17,8 +17,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 16:23:25.050403752 -0400
-+++ github/security/device_cgroup.c	2012-10-16 16:23:58.299308581 -0400
+--- github.orig/security/device_cgroup.c	2012-10-16 17:12:36.318908014 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:12:36.570914978 -0400
 @@ -361,8 +361,8 @@
  				   int filetype, const char *buffer)
  {

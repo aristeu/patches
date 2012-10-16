@@ -17,8 +17,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-15 15:43:31.454751907 -0400
-+++ github/security/device_cgroup.c	2012-10-15 15:43:47.375160960 -0400
+--- github.orig/security/device_cgroup.c	2012-10-16 17:12:28.018680457 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:12:36.318908014 -0400
 @@ -42,7 +42,10 @@
  struct dev_cgroup {
  	struct cgroup_subsys_state css;

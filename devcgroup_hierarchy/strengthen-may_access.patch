@@ -12,9 +12,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 16:43:17.754878763 -0400
-+++ github/security/device_cgroup.c	2012-10-16 16:53:21.963343115 -0400
-@@ -371,13 +371,14 @@
+--- github.orig/security/device_cgroup.c	2012-10-16 17:12:37.578942789 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:12:38.098957143 -0400
+@@ -338,13 +338,14 @@
   *		won't have more privileges than its parent or to
   *		verify if a certain access is allowed.
   * @dev_cgroup: dev cgroup to be tested against
@@ -30,7 +30,7 @@ Index: github/security/device_cgroup.c
  
  	list_for_each_entry(ex, &dev_cgroup->exceptions, list) {
  		if ((refex->type & DEV_BLOCK) && !(ex->type & DEV_BLOCK))
-@@ -390,22 +391,33 @@
+@@ -357,22 +358,33 @@
  			continue;
  		if (refex->access & (~ex->access))
  			continue;

@@ -16,8 +16,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/include/linux/cgroup.h
 ===================================================================
---- github.orig/include/linux/cgroup.h	2012-10-15 15:47:27.284813453 -0400
-+++ github/include/linux/cgroup.h	2012-10-15 15:47:29.564872070 -0400
+--- github.orig/include/linux/cgroup.h	2012-10-16 17:12:27.378662797 -0400
++++ github/include/linux/cgroup.h	2012-10-16 17:12:37.830949739 -0400
 @@ -438,6 +438,12 @@
  void cgroup_exclude_rmdir(struct cgroup_subsys_state *css);
  void cgroup_release_and_wakeup_rmdir(struct cgroup_subsys_state *css);
@@ -33,8 +33,8 @@ Index: github/include/linux/cgroup.h
   * methods.
 Index: github/kernel/cgroup.c
 ===================================================================
---- github.orig/kernel/cgroup.c	2012-10-15 15:47:27.284813453 -0400
-+++ github/kernel/cgroup.c	2012-10-15 15:48:14.518027627 -0400
+--- github.orig/kernel/cgroup.c	2012-10-16 17:12:27.378662797 -0400
++++ github/kernel/cgroup.c	2012-10-16 17:12:37.834949853 -0400
 @@ -5459,6 +5459,63 @@
  	return css ? css : ERR_PTR(-ENOENT);
  }

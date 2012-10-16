@@ -22,9 +22,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-15 15:43:47.631167539 -0400
-+++ github/security/device_cgroup.c	2012-10-15 15:43:47.879173963 -0400
-@@ -214,6 +214,8 @@
+--- github.orig/security/device_cgroup.c	2012-10-16 17:12:38.350964095 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:12:38.598970931 -0400
+@@ -263,6 +263,8 @@
  #define DEVCG_ALLOW 1
  #define DEVCG_DENY 2
  #define DEVCG_LIST 3
@@ -33,7 +33,7 @@ Index: github/security/device_cgroup.c
  
  #define MAJMINLEN 13
  #define ACCLEN 4
-@@ -249,11 +251,25 @@
+@@ -298,11 +300,25 @@
  		sprintf(str, "%u", m);
  }
  
@@ -60,7 +60,7 @@ Index: github/security/device_cgroup.c
  	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
  
  	rcu_read_lock();
-@@ -269,20 +285,37 @@
+@@ -318,20 +334,37 @@
  		set_majmin(min, ~0);
  		seq_printf(m, "%c %s:%s %s\n", type_to_char(DEV_ALL),
  			   maj, min, acc);
@@ -107,7 +107,7 @@ Index: github/security/device_cgroup.c
  /**
   * may_access - verifies if a new exception is part of what is allowed
   *		by a dev cgroup based on the default policy +
-@@ -521,6 +554,16 @@
+@@ -749,6 +782,16 @@
  		.read_seq_string = devcgroup_seq_read,
  		.private = DEVCG_LIST,
  	},
@@ -126,8 +126,8 @@ Index: github/security/device_cgroup.c
  
 Index: github/Documentation/cgroups/devices.txt
 ===================================================================
---- github.orig/Documentation/cgroups/devices.txt	2012-10-15 15:43:31.238746320 -0400
-+++ github/Documentation/cgroups/devices.txt	2012-10-15 15:43:47.879173963 -0400
+--- github.orig/Documentation/cgroups/devices.txt	2012-10-16 17:12:27.102655181 -0400
++++ github/Documentation/cgroups/devices.txt	2012-10-16 17:12:38.598970931 -0400
 @@ -3,37 +3,65 @@
  1. Description:
  

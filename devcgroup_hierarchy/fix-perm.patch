@@ -16,9 +16,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-15 15:56:49.327296279 -0400
-+++ github/security/device_cgroup.c	2012-10-15 15:57:40.828626947 -0400
-@@ -377,6 +377,20 @@
+--- github.orig/security/device_cgroup.c	2012-10-16 17:12:36.822921933 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:12:37.074928887 -0400
+@@ -344,6 +344,20 @@
  	return may_access(parent, ex);
  }
  
@@ -39,7 +39,7 @@ Index: github/security/device_cgroup.c
  /*
   * Modify the exception list using allow/deny rules.
   * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
-@@ -397,6 +411,8 @@
+@@ -364,6 +378,8 @@
  	char temp[12];		/* 11 + 1 characters needed for a u32 */
  	int count, rc;
  	struct dev_exception_item ex;
@@ -48,7 +48,7 @@ Index: github/security/device_cgroup.c
  
  	if (!capable(CAP_SYS_ADMIN))
  		return -EPERM;
-@@ -408,9 +424,13 @@
+@@ -375,9 +391,13 @@
  	case 'a':
  		switch (filetype) {
  		case DEVCG_ALLOW:

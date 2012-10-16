@@ -54,9 +54,9 @@ And this should fix it.
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-15 15:43:47.879173963 -0400
-+++ github/security/device_cgroup.c	2012-10-15 15:43:48.147180894 -0400
-@@ -595,10 +595,10 @@
+--- github.orig/security/device_cgroup.c	2012-10-16 17:12:36.570914978 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:12:36.822921933 -0400
+@@ -552,10 +552,10 @@
   *
   * returns 0 on success, -EPERM case the operation is not permitted
   */
@@ -69,7 +69,7 @@ Index: github/security/device_cgroup.c
  	struct dev_exception_item ex;
  	int rc;
  
-@@ -609,6 +609,7 @@
+@@ -566,6 +566,7 @@
  	ex.access = access;
  
  	rcu_read_lock();
@@ -77,7 +77,7 @@ Index: github/security/device_cgroup.c
  	rc = may_access(dev_cgroup, &ex);
  	rcu_read_unlock();
  
-@@ -620,7 +621,6 @@
+@@ -577,7 +578,6 @@
  
  int __devcgroup_inode_permission(struct inode *inode, int mask)
  {
@@ -85,7 +85,7 @@ Index: github/security/device_cgroup.c
  	short type, access = 0;
  
  	if (S_ISBLK(inode->i_mode))
-@@ -632,13 +632,12 @@
+@@ -589,13 +589,12 @@
  	if (mask & MAY_READ)
  		access |= ACC_READ;
  
@@ -101,7 +101,7 @@ Index: github/security/device_cgroup.c
  	short type;
  
  	if (!S_ISBLK(mode) && !S_ISCHR(mode))
-@@ -649,7 +648,7 @@
+@@ -606,7 +605,7 @@
  	else
  		type = DEV_CHAR;
  
