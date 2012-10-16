@@ -1,13 +1,8 @@
-device_cgroup: add "behavior" in dev_cgroup structure
+device_cgroup: rename 'deny_all' to behavior
 
-behavior will determine if the default policy is to deny all device access
-unless for the ones in the exception list.
-
-This variable will be used in the next patches to convert device_cgroup
-internally into a default policy + rules.
-
-v2:
-- renamed deny_all to behavior
+This was done in a v2 patch but v1 ended up being committed. The variable name
+is less confusing and stores the default behavior when no matching exception
+exists.
 
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Li Zefan <lizefan@huawei.com>
@@ -22,12 +17,13 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-08-21 09:49:38.698415513 -0400
-+++ github/security/device_cgroup.c	2012-08-21 10:50:34.650810797 -0400
-@@ -42,6 +42,10 @@
+--- github.orig/security/device_cgroup.c	2012-10-15 15:43:31.454751907 -0400
++++ github/security/device_cgroup.c	2012-10-15 15:43:47.375160960 -0400
+@@ -42,7 +42,10 @@
  struct dev_cgroup {
  	struct cgroup_subsys_state css;
- 	struct list_head whitelist;
+ 	struct list_head exceptions;
+-	bool deny_all;
 +	enum {
 +		DEVCG_DEFAULT_ALLOW,
 +		DEVCG_DEFAULT_DENY,
@@ -35,30 +31,76 @@ Index: github/security/device_cgroup.c
  };
  
  static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_subsys_state *s)
-@@ -178,12 +182,14 @@
- 		wh->minor = wh->major = ~0;
- 		wh->type = DEV_ALL;
- 		wh->access = ACC_MASK;
+@@ -182,13 +185,13 @@
+ 	parent_cgroup = cgroup->parent;
+ 
+ 	if (parent_cgroup == NULL)
+-		dev_cgroup->deny_all = false;
 +		dev_cgroup->behavior = DEVCG_DEFAULT_ALLOW;
- 		list_add(&wh->list, &dev_cgroup->whitelist);
- 	} else {
+ 	else {
  		parent_dev_cgroup = cgroup_to_devcgroup(parent_cgroup);
  		mutex_lock(&devcgroup_mutex);
- 		ret = dev_whitelist_copy(&dev_cgroup->whitelist,
- 				&parent_dev_cgroup->whitelist);
+ 		ret = dev_exceptions_copy(&dev_cgroup->exceptions,
+ 					  &parent_dev_cgroup->exceptions);
+-		dev_cgroup->deny_all = parent_dev_cgroup->deny_all;
 +		dev_cgroup->behavior = parent_dev_cgroup->behavior;
  		mutex_unlock(&devcgroup_mutex);
  		if (ret) {
  			kfree(dev_cgroup);
-@@ -409,9 +415,11 @@
- 	case DEVCG_ALLOW:
- 		if (!parent_has_perm(devcgroup, &wh))
- 			return -EPERM;
-+		devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
- 		return dev_whitelist_add(devcgroup, &wh);
- 	case DEVCG_DENY:
- 		dev_whitelist_rm(devcgroup, &wh);
-+		devcgroup->behavior = DEVCG_DEFAULT_DENY;
- 		break;
- 	default:
- 		return -EINVAL;
+@@ -260,7 +263,7 @@
+ 	 * - List the exceptions in case the default policy is to deny
+ 	 * This way, the file remains as a "whitelist of devices"
+ 	 */
+-	if (devcgroup->deny_all == false) {
++	if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
+ 		set_access(acc, ACC_MASK);
+ 		set_majmin(maj, ~0);
+ 		set_majmin(min, ~0);
+@@ -314,12 +317,12 @@
+ 	 * In two cases we'll consider this new exception valid:
+ 	 * - the dev cgroup has its default policy to allow + exception list:
+ 	 *   the new exception should *not* match any of the exceptions
+-	 *   (!deny_all, !match)
++	 *   (behavior == DEVCG_DEFAULT_ALLOW, !match)
+ 	 * - the dev cgroup has its default policy to deny + exception list:
+ 	 *   the new exception *should* match the exceptions
+-	 *   (deny_all, match)
++	 *   (behavior == DEVCG_DEFAULT_DENY, match)
+ 	 */
+-	if (dev_cgroup->deny_all == match)
++	if ((dev_cgroup->behavior == DEVCG_DEFAULT_DENY) && match)
+ 		return 1;
+ 	return 0;
+ }
+@@ -375,11 +378,11 @@
+ 			if (!parent_has_perm(devcgroup, &ex))
+ 				return -EPERM;
+ 			dev_exception_clean(devcgroup);
+-			devcgroup->deny_all = false;
++			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
+ 			break;
+ 		case DEVCG_DENY:
+ 			dev_exception_clean(devcgroup);
+-			devcgroup->deny_all = true;
++			devcgroup->behavior = DEVCG_DEFAULT_DENY;
+ 			break;
+ 		default:
+ 			return -EINVAL;
+@@ -452,7 +455,7 @@
+ 		 * an matching exception instead. And be silent about it: we
+ 		 * don't want to break compatibility
+ 		 */
+-		if (devcgroup->deny_all == false) {
++		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
+ 			dev_exception_rm(devcgroup, &ex);
+ 			return 0;
+ 		}
+@@ -463,7 +466,7 @@
+ 		 * an matching exception instead. And be silent about it: we
+ 		 * don't want to break compatibility
+ 		 */
+-		if (devcgroup->deny_all == true) {
++		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {
+ 			dev_exception_rm(devcgroup, &ex);
+ 			return 0;
+ 		}

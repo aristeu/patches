@@ -12,8 +12,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-08-21 10:51:05.751689805 -0400
-+++ github/security/device_cgroup.c	2012-08-21 10:51:15.015951623 -0400
+--- github.orig/security/device_cgroup.c	2012-10-15 15:43:47.375160960 -0400
++++ github/security/device_cgroup.c	2012-10-15 15:43:47.631167539 -0400
 @@ -361,8 +361,8 @@
  				   int filetype, const char *buffer)
  {
@@ -22,14 +22,14 @@ Index: github/security/device_cgroup.c
 -	int count;
 +	char temp[12];		/* 11 + 1 characters needed for a u32 */
 +	int count, rc;
- 	struct dev_whitelist_item wh;
+ 	struct dev_exception_item ex;
  
  	if (!capable(CAP_SYS_ADMIN))
 @@ -405,8 +405,16 @@
- 		wh.major = ~0;
+ 		ex.major = ~0;
  		b++;
  	} else if (isdigit(*b)) {
--		wh.major = simple_strtoul(b, &endp, 10);
+-		ex.major = simple_strtoul(b, &endp, 10);
 -		b = endp;
 +		memset(temp, 0, sizeof(temp));
 +		for (count = 0; count < sizeof(temp) - 1; count++) {
@@ -38,17 +38,17 @@ Index: github/security/device_cgroup.c
 +			if (!isdigit(*b))
 +				break;
 +		}
-+		rc = kstrtou32(temp, 10, &wh.major);
++		rc = kstrtou32(temp, 10, &ex.major);
 +		if (rc)
 +			return -EINVAL;
  	} else {
  		return -EINVAL;
  	}
 @@ -419,8 +427,16 @@
- 		wh.minor = ~0;
+ 		ex.minor = ~0;
  		b++;
  	} else if (isdigit(*b)) {
--		wh.minor = simple_strtoul(b, &endp, 10);
+-		ex.minor = simple_strtoul(b, &endp, 10);
 -		b = endp;
 +		memset(temp, 0, sizeof(temp));
 +		for (count = 0; count < sizeof(temp) - 1; count++) {
@@ -57,7 +57,7 @@ Index: github/security/device_cgroup.c
 +			if (!isdigit(*b))
 +				break;
 +		}
-+		rc = kstrtou32(temp, 10, &wh.minor);
++		rc = kstrtou32(temp, 10, &ex.minor);
 +		if (rc)
 +			return -EINVAL;
  	} else {

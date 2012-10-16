@@ -2,9 +2,11 @@
  security/device_cgroup.c |   18 +++++++++---------
  1 file changed, 9 insertions(+), 9 deletions(-)
 
---- github.orig/security/device_cgroup.c	2012-09-26 15:55:32.572002344 -0400
-+++ github/security/device_cgroup.c	2012-09-26 15:55:35.702790316 -0400
-@@ -102,7 +102,7 @@ free_and_exit:
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-10-15 15:43:48.399187412 -0400
++++ github/security/device_cgroup.c	2012-10-15 15:43:48.651193929 -0400
+@@ -102,7 +102,7 @@
  /*
   * called under devcgroup_mutex
   */
@@ -13,7 +15,7 @@
  			     struct dev_exception_item *ex)
  {
  	struct dev_exception_item *excopy, *walk;
-@@ -111,7 +111,7 @@ static int dev_exception_add(struct dev_
+@@ -111,7 +111,7 @@
  	if (!excopy)
  		return -ENOMEM;
  
@@ -22,7 +24,7 @@
  		if (walk->type != ex->type)
  			continue;
  		if (walk->major != ex->major)
-@@ -125,19 +125,19 @@ static int dev_exception_add(struct dev_
+@@ -125,19 +125,19 @@
  	}
  
  	if (excopy != NULL)
@@ -45,7 +47,7 @@
  		if (walk->type != ex->type)
  			continue;
  		if (walk->major != ex->major)
-@@ -525,10 +525,10 @@ 		case '\0':
+@@ -525,10 +525,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -58,7 +60,7 @@
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -536,10 +536,10 @@ 			return 0;
+@@ -536,10 +536,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {

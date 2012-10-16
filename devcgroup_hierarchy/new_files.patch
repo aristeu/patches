@@ -20,9 +20,11 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c          |   63 +++++++++++++++++++++++++++-----
  2 files changed, 107 insertions(+), 29 deletions(-)
 
---- github.orig/security/device_cgroup.c	2012-09-25 15:12:32.303166044 -0400
-+++ github/security/device_cgroup.c	2012-09-26 15:10:02.686165823 -0400
-@@ -214,6 +214,8 @@ static void devcgroup_destroy(struct cgr
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-10-15 15:43:47.631167539 -0400
++++ github/security/device_cgroup.c	2012-10-15 15:43:47.879173963 -0400
+@@ -214,6 +214,8 @@
  #define DEVCG_ALLOW 1
  #define DEVCG_DENY 2
  #define DEVCG_LIST 3
@@ -31,7 +33,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  
  #define MAJMINLEN 13
  #define ACCLEN 4
-@@ -249,11 +251,25 @@ 	if (m == ~0)
+@@ -249,11 +251,25 @@
  		sprintf(str, "%u", m);
  }
  
@@ -58,7 +60,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
  
  	rcu_read_lock();
-@@ -269,20 +285,37 @@ 		set_majmin(maj, ~0);
+@@ -269,20 +285,37 @@
  		set_majmin(min, ~0);
  		seq_printf(m, "%c %s:%s %s\n", type_to_char(DEV_ALL),
  			   maj, min, acc);
@@ -105,7 +107,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  /**
   * may_access - verifies if a new exception is part of what is allowed
   *		by a dev cgroup based on the default policy +
-@@ -521,6 +554,16 @@ static struct cftype dev_cgroup_files[] 
+@@ -521,6 +554,16 @@
  		.read_seq_string = devcgroup_seq_read,
  		.private = DEVCG_LIST,
  	},
@@ -122,9 +124,11 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	{ }	/* terminate */
  };
  
---- github.orig/Documentation/cgroups/devices.txt	2012-09-25 15:12:31.766856749 -0400
-+++ github/Documentation/cgroups/devices.txt	2012-09-25 15:12:32.332165412 -0400
-@@ -3,37 +3,65 @@ Device Whitelist Controller
+Index: github/Documentation/cgroups/devices.txt
+===================================================================
+--- github.orig/Documentation/cgroups/devices.txt	2012-10-15 15:43:31.238746320 -0400
++++ github/Documentation/cgroups/devices.txt	2012-10-15 15:43:47.879173963 -0400
+@@ -3,37 +3,65 @@
  1. Description:
  
  Implement a cgroup to track and enforce open and mknod restrictions
@@ -209,7 +213,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  
  3. Security
  
-@@ -50,3 +78,10 @@ task to a new cgroup.  (Again we'll prob
+@@ -50,3 +78,10 @@
  
  A cgroup may not be granted more permissions than the cgroup's
  parent has.

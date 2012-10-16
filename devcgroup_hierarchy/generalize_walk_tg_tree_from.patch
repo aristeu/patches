@@ -3,9 +3,11 @@
  kernel/cgroup.c        |   59 +++++++++++++++++++++++++++++++++++++++++++++++++
  2 files changed, 65 insertions(+)
 
---- github.orig/include/linux/cgroup.h	2012-09-26 15:07:26.438053087 -0400
-+++ github/include/linux/cgroup.h	2012-09-26 15:56:11.956977773 -0400
-@@ -435,6 +435,12 @@ int cgroup_is_descendant(const struct cg
+Index: github/include/linux/cgroup.h
+===================================================================
+--- github.orig/include/linux/cgroup.h	2012-10-15 15:47:27.284813453 -0400
++++ github/include/linux/cgroup.h	2012-10-15 15:47:29.564872070 -0400
+@@ -438,6 +438,12 @@
  void cgroup_exclude_rmdir(struct cgroup_subsys_state *css);
  void cgroup_release_and_wakeup_rmdir(struct cgroup_subsys_state *css);
  
@@ -18,9 +20,11 @@
  /*
   * Control Group taskset, used to pass around set of tasks to cgroup_subsys
   * methods.
---- github.orig/kernel/cgroup.c	2012-09-26 15:07:26.450925457 -0400
-+++ github/kernel/cgroup.c	2012-09-26 15:56:11.969978091 -0400
-@@ -5331,6 +5331,65 @@ 	if (id < 0 || id >= CGROUP_SUBSYS_COUNT
+Index: github/kernel/cgroup.c
+===================================================================
+--- github.orig/kernel/cgroup.c	2012-10-15 15:47:27.284813453 -0400
++++ github/kernel/cgroup.c	2012-10-15 15:48:14.518027627 -0400
+@@ -5459,6 +5459,63 @@
  	return css ? css : ERR_PTR(-ENOENT);
  }
  
@@ -72,7 +76,6 @@
 +
 +	return ret;
 +}
-+
 +EXPORT_SYMBOL_GPL(walk_cgroup_tree_from);
 +
 +/* cgroup_visitor No-Op to be used with walk_cgroup_tree_from */
@@ -80,7 +83,6 @@
 +{
 +	return 0;
 +}
-+
 +EXPORT_SYMBOL_GPL(cgroup_visitor_nop);
 +
  #ifdef CONFIG_CGROUP_DEBUG

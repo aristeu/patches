@@ -2,9 +2,11 @@
  security/device_cgroup.c |  106 ++++++++++++++++++++++++++++++++++-------------
  1 file changed, 78 insertions(+), 28 deletions(-)
 
---- github.orig/security/device_cgroup.c	2012-09-26 15:55:35.000000000 -0400
-+++ github/security/device_cgroup.c	2012-09-26 15:56:07.394977880 -0400
-@@ -39,13 +39,27 @@ struct dev_exception_item {
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-10-15 15:43:48.651193929 -0400
++++ github/security/device_cgroup.c	2012-10-15 15:43:48.899200350 -0400
+@@ -39,13 +39,27 @@
  	struct rcu_head rcu;
  };
  
@@ -36,7 +38,7 @@
  };
  
  static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_subsys_state *s)
-@@ -102,8 +116,39 @@ free_and_exit:
+@@ -102,8 +116,39 @@
  /*
   * called under devcgroup_mutex
   */
@@ -78,7 +80,7 @@
  {
  	struct dev_exception_item *excopy, *walk;
  
-@@ -129,28 +174,24 @@ static int dev_exception_add(struct list
+@@ -129,28 +174,24 @@
  	return 0;
  }
  
@@ -121,7 +123,7 @@
  }
  
  /**
-@@ -167,6 +208,11 @@ static void dev_exception_clean(struct d
+@@ -167,6 +208,11 @@
  		list_del(&ex->list);
  		kfree(ex);
  	}
@@ -133,7 +135,7 @@
  }
  
  /*
-@@ -182,6 +228,8 @@ static struct cgroup_subsys_state *devcg
+@@ -182,6 +228,8 @@
  	if (!dev_cgroup)
  		return ERR_PTR(-ENOMEM);
  	INIT_LIST_HEAD(&dev_cgroup->exceptions);
@@ -142,7 +144,7 @@
  	parent_cgroup = cgroup->parent;
  
  	if (parent_cgroup == NULL)
-@@ -432,10 +480,12 @@ 	memset(&ex, 0, sizeof(ex));
+@@ -432,10 +480,12 @@
  			if (rc)
  				return rc;
  			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
@@ -155,7 +157,7 @@
  			break;
  		default:
  			return -EINVAL;
-@@ -525,10 +575,10 @@ 		case '\0':
+@@ -525,10 +575,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -168,7 +170,7 @@
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -536,10 +586,10 @@ 			return 0;
+@@ -536,10 +586,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {

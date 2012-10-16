@@ -52,22 +52,24 @@ And this should fix it.
  security/device_cgroup.c.rej |   15 ---------------
  2 files changed, 7 insertions(+), 23 deletions(-)
 
---- github.orig/security/device_cgroup.c	2012-09-14 11:46:28.000000000 -0400
-+++ github/security/device_cgroup.c	2012-09-14 11:47:24.106978445 -0400
-@@ -586,10 +586,10 @@ struct cgroup_subsys devices_subsys = {
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-10-15 15:43:47.879173963 -0400
++++ github/security/device_cgroup.c	2012-10-15 15:43:48.147180894 -0400
+@@ -595,10 +595,10 @@
   *
   * returns 0 on success, -EPERM case the operation is not permitted
   */
 -static int __devcgroup_check_permission(struct dev_cgroup *dev_cgroup,
 -					short type, u32 major, u32 minor,
 +static int __devcgroup_check_permission(short type, u32 major, u32 minor,
- 					short access)
+ 				        short access)
  {
 +	struct dev_cgroup *dev_cgroup;
  	struct dev_exception_item ex;
  	int rc;
  
-@@ -600,6 +600,7 @@ 	memset(&ex, 0, sizeof(ex));
+@@ -609,6 +609,7 @@
  	ex.access = access;
  
  	rcu_read_lock();
@@ -75,7 +77,7 @@ And this should fix it.
  	rc = may_access(dev_cgroup, &ex);
  	rcu_read_unlock();
  
-@@ -611,7 +612,6 @@ 	return 0;
+@@ -620,7 +621,6 @@
  
  int __devcgroup_inode_permission(struct inode *inode, int mask)
  {
@@ -83,7 +85,7 @@ And this should fix it.
  	short type, access = 0;
  
  	if (S_ISBLK(inode->i_mode))
-@@ -623,13 +623,12 @@ 	short type, access = 0;
+@@ -632,13 +632,12 @@
  	if (mask & MAY_READ)
  		access |= ACC_READ;
  
@@ -99,7 +101,7 @@ And this should fix it.
  	short type;
  
  	if (!S_ISBLK(mode) && !S_ISCHR(mode))
-@@ -640,7 +639,7 @@ 		return 0;
+@@ -649,7 +648,7 @@
  	else
  		type = DEV_CHAR;
  
