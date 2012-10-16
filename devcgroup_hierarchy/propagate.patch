@@ -1,11 +1,49 @@
+device_cgroup: propagate local changes down the hierarchy
+
+This patch makes all changes propagate down in hierarchy respecting when
+possible local configurations.
+
+Behavior changes will clean up exceptions in all the children except when the
+parent changes the behavior from allow to deny and the child's behavior was
+already deny, in which case the local exceptions will be reused. The inverse
+is not possible: you can't have a parent with behavior deny and a child with
+behavior accept.
+
+New exceptions allowing additional access to devices won't be propagated, but
+it'll be possible to add an exception to access all of part of the newly
+allowed device(s).
+
+New exceptions disallowing access to devices will be propagated down and the
+local group's exceptions will be revalidated for the new situation.
+Example:
+      A
+     / \
+        B
+
+    group        behavior          exceptions
+    A            allow             "b 8:* rwm", "c 116:1 rw"
+    B            deny              "c 1:3 rwm", "c 116:2 rwm", "b 3:* rwm"
+
+If a new exception is added to group A:
+	# echo "c 116:* r" > A/devices.deny
+it'll propagate down and after revalidating B's local exceptions, the exception
+"c 116:2 rwm" will be removed.
+
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+
 ---
  security/device_cgroup.c |  196 ++++++++++++++++++++++++++++++++++++++++++-----
  1 file changed, 177 insertions(+), 19 deletions(-)
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 14:00:56.600160676 -0400
-+++ github/security/device_cgroup.c	2012-10-16 16:21:22.607072222 -0400
+--- github.orig/security/device_cgroup.c	2012-10-16 16:53:21.963343115 -0400
++++ github/security/device_cgroup.c	2012-10-16 16:56:21.476235765 -0400
 @@ -194,6 +194,16 @@
  	return rc;
  }

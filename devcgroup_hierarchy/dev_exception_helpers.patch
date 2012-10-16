@@ -1,3 +1,16 @@
+device_cgroup: prepare exception list handling functions for two lists
+
+In the following patches, device_cgroup structure will have two sets of
+behavior and exceptions list (actual one, another with the local settings)
+so rework the functions to use exception list, not a device_cgroup.
+
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+
 ---
  security/device_cgroup.c |   18 +++++++++---------
  1 file changed, 9 insertions(+), 9 deletions(-)

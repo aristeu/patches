@@ -1,3 +1,15 @@
+device_cgroup: add proper checking when changing default behavior
+
+Before changing a group's default behavior to ALLOW, we must check if its
+parent's behavior is also ALLOW.
+
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+
 ---
  security/device_cgroup.c |   22 +++++++++++++++++++++-
  1 file changed, 21 insertions(+), 1 deletion(-)

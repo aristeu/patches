@@ -1,3 +1,14 @@
+cgroup: generalize walk_tg_tree_from()
+
+Make walk_tg_tree_from() generic enough to be used by other cgroup subsystems.
+
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+
 ---
  include/linux/cgroup.h |    6 ++++
  kernel/cgroup.c        |   59 +++++++++++++++++++++++++++++++++++++++++++++++++

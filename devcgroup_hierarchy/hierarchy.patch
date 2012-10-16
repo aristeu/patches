@@ -1,3 +1,16 @@
+device_cgroup: keep track of local group settings
+
+In preparation for better hierarchy support, it's needed to retain the local
+settings in order to try to reapply them after a propagated change if they're
+still valid.
+
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+ 
 ---
  security/device_cgroup.c |  106 ++++++++++++++++++++++++++++++++++-------------
  1 file changed, 78 insertions(+), 28 deletions(-)
