@@ -13,8 +13,7 @@ lock held.
 [ INFO: suspicious RCU usage. ]
 3.6.0-rc5-next-20120913+ #42 Not tainted
 -------------------------------
-/home/latest/linux/include/linux/cgroup.h:553 suspicious
-rcu_dereference_check() usage!
+include/linux/cgroup.h:553 suspicious rcu_dereference_check() usage!
 
 other info that might help us debug this:
 
@@ -57,11 +56,9 @@ And this should fix it.
  security/device_cgroup.c |   15 +++++++--------
  1 file changed, 7 insertions(+), 8 deletions(-)
 
-Index: github/security/device_cgroup.c
-===================================================================
---- github.orig/security/device_cgroup.c	2012-10-18 12:09:11.698536944 -0400
-+++ github/security/device_cgroup.c	2012-10-18 12:12:43.756420788 -0400
-@@ -552,10 +552,10 @@
+--- github.orig/security/device_cgroup.c	2012-10-17 11:11:08.514793906 -0400
++++ github/security/device_cgroup.c	2012-10-19 16:35:37.936804289 -0400
+@@ -533,10 +533,10 @@ struct cgroup_subsys devices_subsys = {
   *
   * returns 0 on success, -EPERM case the operation is not permitted
   */
@@ -74,7 +71,7 @@ Index: github/security/device_cgroup.c
  	struct dev_exception_item ex;
  	int rc;
  
-@@ -566,6 +566,7 @@
+@@ -547,6 +547,7 @@ 	memset(&ex, 0, sizeof(ex));
  	ex.access = access;
  
  	rcu_read_lock();
@@ -82,7 +79,7 @@ Index: github/security/device_cgroup.c
  	rc = may_access(dev_cgroup, &ex);
  	rcu_read_unlock();
  
-@@ -577,7 +578,6 @@
+@@ -558,7 +559,6 @@ 	return 0;
  
  int __devcgroup_inode_permission(struct inode *inode, int mask)
  {
@@ -90,7 +87,7 @@ Index: github/security/device_cgroup.c
  	short type, access = 0;
  
  	if (S_ISBLK(inode->i_mode))
-@@ -589,13 +589,12 @@
+@@ -570,13 +570,12 @@ 	short type, access = 0;
  	if (mask & MAY_READ)
  		access |= ACC_READ;
  
@@ -106,7 +103,7 @@ Index: github/security/device_cgroup.c
  	short type;
  
  	if (!S_ISBLK(mode) && !S_ISCHR(mode))
-@@ -606,7 +605,7 @@
+@@ -587,7 +586,7 @@ 		return 0;
  	else
  		type = DEV_CHAR;
  

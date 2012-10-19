@@ -11,35 +11,30 @@ Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- security/device_cgroup.c |   22 +++++++++++++++++++++-
- 1 file changed, 21 insertions(+), 1 deletion(-)
+ security/device_cgroup.c |   19 ++++++++++++++++++-
+ 1 file changed, 18 insertions(+), 1 deletion(-)
 
-Index: github/security/device_cgroup.c
-===================================================================
---- github.orig/security/device_cgroup.c	2012-10-19 15:13:31.395061134 -0400
-+++ github/security/device_cgroup.c	2012-10-19 15:15:33.429682542 -0400
-@@ -344,6 +344,20 @@
+--- github.orig/security/device_cgroup.c	2012-10-19 16:36:50.135790476 -0400
++++ github/security/device_cgroup.c	2012-10-19 16:48:50.710978125 -0400
+@@ -344,6 +344,17 @@ static int parent_has_perm(struct dev_cg
  	return may_access(parent, ex);
  }
  
 +/**
 + * may_allow_all - checks if it's possible to change the behavior to
 + *		   allow based on parent's rules.
-+ * @devcg: device cgroup to be checked
++ * @parent: device cgroup's parent
 + * returns: != 0 in case it's allowed, 0 otherwise
 + */
-+static int may_allow_all(struct dev_cgroup *devcg)
++static inline int may_allow_all(struct dev_cgroup *parent)
 +{
-+	struct cgroup *pcg = devcg->css.cgroup->parent;
-+	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
-+
-+	return parent->behavior == DEVCG_ALLOW;
++	return parent->behavior == DEVCG_DEFAULT_ALLOW;
 +}
 +
  /*
   * Modify the exception list using allow/deny rules.
   * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
-@@ -364,6 +378,8 @@
+@@ -364,6 +375,8 @@ static int devcgroup_update_access(struc
  	char temp[12];		/* 11 + 1 characters needed for a u32 */
  	int count, rc;
  	struct dev_exception_item ex;
@@ -48,12 +43,12 @@ Index: github/security/device_cgroup.c
  
  	if (!capable(CAP_SYS_ADMIN))
  		return -EPERM;
-@@ -375,9 +391,13 @@
+@@ -375,9 +388,13 @@ 	memset(&ex, 0, sizeof(ex));
  	case 'a':
  		switch (filetype) {
  		case DEVCG_ALLOW:
 -			if (!parent_has_perm(devcgroup, &ex))
-+			if (!may_allow_all(devcgroup))
++			if (!may_allow_all(parent))
  				return -EPERM;
  			dev_exception_clean(devcgroup);
 +			rc = dev_exceptions_copy(&devcgroup->exceptions,
