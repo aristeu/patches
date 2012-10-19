@@ -1,0 +1,15 @@
+This patchset rebases the v2 of the patchset since the v1 was pushed into -rc1
+instead.
+
+ device_cgroup.c |   68 +++++++++++++++++++++++++++++++++++---------------------
+ 1 file changed, 43 insertions(+), 25 deletions(-)
+
+Cc: Dave Jones <davej@redhat.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+

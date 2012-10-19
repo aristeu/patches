@@ -4,12 +4,15 @@ This patch converts the code to use kstrtou32() instead of simple_strtoul()
 which is deprecated. The real size of the variables are u32, so use kstrtou32
 instead of kstrtoul
 
+
+Cc: Dave Jones <davej@redhat.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Li Zefan <lizefan@huawei.com>
 Cc: James Morris <jmorris@namei.org>
 Cc: Pavel Emelyanov <xemul@openvz.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
-Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 
 ---
  security/device_cgroup.c |   28 ++++++++++++++++++++++------
@@ -17,8 +20,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 17:12:36.318908014 -0400
-+++ github/security/device_cgroup.c	2012-10-16 17:12:36.570914978 -0400
+--- github.orig/security/device_cgroup.c	2012-10-18 12:05:10.995850679 -0400
++++ github/security/device_cgroup.c	2012-10-18 12:09:11.698536944 -0400
 @@ -361,8 +361,8 @@
  				   int filetype, const char *buffer)
  {

@@ -1,6 +1,6 @@
+rcu.patch
 deny_all.patch
 kstrtou32.patch
-rcu.patch
 fix-perm.patch
 dev_exception_helpers.patch
 hierarchy.patch

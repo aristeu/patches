@@ -23,7 +23,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 Index: github/security/device_cgroup.c
 ===================================================================
 --- github.orig/security/device_cgroup.c	2012-10-16 17:12:38.350964095 -0400
-+++ github/security/device_cgroup.c	2012-10-16 17:12:38.598970931 -0400
++++ github/security/device_cgroup.c	2012-10-16 17:51:25.674616374 -0400
 @@ -263,6 +263,8 @@
  #define DEVCG_ALLOW 1
  #define DEVCG_DENY 2
@@ -107,6 +107,26 @@ Index: github/security/device_cgroup.c
  /**
   * may_access - verifies if a new exception is part of what is allowed
   *		by a dev cgroup based on the default policy +
+@@ -501,13 +534,13 @@
+ 	if (devcg == root)
+ 		return 0;
+ 
+-	/* first copy parent's state */
+-	devcg->behavior = parent->behavior;
+ 	__dev_exception_clean(&devcg->exceptions);
+-	rc = dev_exceptions_copy(&devcg->exceptions, &parent->exceptions);
+-	if (rc) {
+-		devcg->behavior = DEVCG_DEFAULT_DENY;
+-		return rc;
++	if (parent->behavior == devcg->behavior) {
++		rc = dev_exceptions_copy(&devcg->exceptions, &parent->exceptions);
++		if (rc) {
++			devcg->behavior = DEVCG_DEFAULT_DENY;
++			return rc;
++		}
+ 	}
+ 
+ 	if (devcg->behavior != parent->behavior) {
 @@ -749,6 +782,16 @@
  		.read_seq_string = devcgroup_seq_read,
  		.private = DEVCG_LIST,

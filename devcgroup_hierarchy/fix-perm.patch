@@ -16,8 +16,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 17:12:36.822921933 -0400
-+++ github/security/device_cgroup.c	2012-10-16 17:12:37.074928887 -0400
+--- github.orig/security/device_cgroup.c	2012-10-18 12:09:18.018712501 -0400
++++ github/security/device_cgroup.c	2012-10-18 12:09:20.566783260 -0400
 @@ -344,6 +344,20 @@
  	return may_access(parent, ex);
  }

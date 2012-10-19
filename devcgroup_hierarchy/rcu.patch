@@ -1,3 +1,5 @@
+From: Jiri Slaby <jslaby@suse.cz>
+
 Commit "device_cgroup: convert device_cgroup internally to policy +
 exceptions" removed rcu locks which are needed in task_devcgroup
 called in this chain: devcgroup_inode_mknod OR
@@ -39,23 +41,26 @@ Call Trace:
  [<ffffffff81093a00>] ? kthread_create_on_node+0x140/0x140
  [<ffffffff81654f20>] ? gs_change+0xb/0xb
 
-Signed-off-by: Jiri Slaby <jslaby@suse.cz>
-Cc: aris@redhat.com
+Cc: Dave Jones <davej@redhat.com>
 Cc: Andrew Morton <akpm@linux-foundation.org>
 Cc: Tejun Heo <tj@kernel.org>
-Cc: lizefan@huawei.com
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+
 ---
 
 And this should fix it.
 
- security/device_cgroup.c     |   15 +++++++--------
- security/device_cgroup.c.rej |   15 ---------------
- 2 files changed, 7 insertions(+), 23 deletions(-)
+ security/device_cgroup.c |   15 +++++++--------
+ 1 file changed, 7 insertions(+), 8 deletions(-)
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 17:12:36.570914978 -0400
-+++ github/security/device_cgroup.c	2012-10-16 17:12:36.822921933 -0400
+--- github.orig/security/device_cgroup.c	2012-10-18 12:09:11.698536944 -0400
++++ github/security/device_cgroup.c	2012-10-18 12:12:43.756420788 -0400
 @@ -552,10 +552,10 @@
   *
   * returns 0 on success, -EPERM case the operation is not permitted
