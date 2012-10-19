@@ -16,8 +16,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-18 12:09:18.018712501 -0400
-+++ github/security/device_cgroup.c	2012-10-18 12:09:20.566783260 -0400
+--- github.orig/security/device_cgroup.c	2012-10-19 15:13:31.395061134 -0400
++++ github/security/device_cgroup.c	2012-10-19 15:15:33.429682542 -0400
 @@ -344,6 +344,20 @@
  	return may_access(parent, ex);
  }
@@ -30,7 +30,7 @@ Index: github/security/device_cgroup.c
 + */
 +static int may_allow_all(struct dev_cgroup *devcg)
 +{
-+	struct cgroup *pcg = childcg->css.cgroup->parent;
++	struct cgroup *pcg = devcg->css.cgroup->parent;
 +	struct dev_cgroup *parent = cgroup_to_devcgroup(pcg);
 +
 +	return parent->behavior == DEVCG_ALLOW;
