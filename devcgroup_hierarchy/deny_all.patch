@@ -12,7 +12,8 @@ Cc: Li Zefan <lizefan@huawei.com>
 Cc: James Morris <jmorris@namei.org>
 Cc: Pavel Emelyanov <xemul@openvz.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
-Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+Cc: Jiri Slaby <jslaby@suse.cz>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
  security/device_cgroup.c |   25 ++++++++++++++-----------

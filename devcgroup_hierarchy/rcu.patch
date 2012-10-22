@@ -1,3 +1,5 @@
+cgroup: fix invalid rcu dereference
+
 From: Jiri Slaby <jslaby@suse.cz>
 
 Commit "device_cgroup: convert device_cgroup internally to policy +

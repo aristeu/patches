@@ -1,8 +1,9 @@
 This patchset rebases the v2 of the patchset since the v1 was pushed into -rc1
-instead.
+instead. The last patch, not present on previous patchset, fixes the
+permission check when allowing everything in a cgroup.
 
- device_cgroup.c |   68 +++++++++++++++++++++++++++++++++++---------------------
- 1 file changed, 43 insertions(+), 25 deletions(-)
+ device_cgroup.c |   87 +++++++++++++++++++++++++++++++++++++++-----------------
+ 1 file changed, 61 insertions(+), 26 deletions(-)
 
 Cc: Dave Jones <davej@redhat.com>
 Cc: Andrew Morton <akpm@linux-foundation.org>
@@ -11,5 +12,6 @@ Cc: Li Zefan <lizefan@huawei.com>
 Cc: James Morris <jmorris@namei.org>
 Cc: Pavel Emelyanov <xemul@openvz.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Cc: Jiri Slaby <jslaby@suse.cz>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 

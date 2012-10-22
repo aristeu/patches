@@ -16,15 +16,13 @@ Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- Documentation/cgroups/devices.txt |   73 ++++++++++++++++++++++++++++----------
- security/device_cgroup.c          |   63 +++++++++++++++++++++++++++-----
- 2 files changed, 107 insertions(+), 29 deletions(-)
+ Documentation/cgroups/devices.txt |   73 +++++++++++++++++++++++++++---------
+ security/device_cgroup.c          |   75 +++++++++++++++++++++++++++++---------
+ 2 files changed, 113 insertions(+), 35 deletions(-)
 
-Index: github/security/device_cgroup.c
-===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 17:12:38.350964095 -0400
-+++ github/security/device_cgroup.c	2012-10-16 17:51:25.674616374 -0400
-@@ -263,6 +263,8 @@
+--- github.orig/security/device_cgroup.c	2012-10-19 17:22:33.092977463 -0400
++++ github/security/device_cgroup.c	2012-10-19 17:22:39.556853226 -0400
+@@ -263,6 +263,8 @@ static void devcgroup_destroy(struct cgr
  #define DEVCG_ALLOW 1
  #define DEVCG_DENY 2
  #define DEVCG_LIST 3
@@ -33,7 +31,7 @@ Index: github/security/device_cgroup.c
  
  #define MAJMINLEN 13
  #define ACCLEN 4
-@@ -298,11 +300,25 @@
+@@ -298,11 +300,25 @@ 	if (m == ~0)
  		sprintf(str, "%u", m);
  }
  
@@ -60,7 +58,7 @@ Index: github/security/device_cgroup.c
  	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
  
  	rcu_read_lock();
-@@ -318,20 +334,37 @@
+@@ -318,20 +334,37 @@ 		set_majmin(maj, ~0);
  		set_majmin(min, ~0);
  		seq_printf(m, "%c %s:%s %s\n", type_to_char(DEV_ALL),
  			   maj, min, acc);
@@ -107,7 +105,7 @@ Index: github/security/device_cgroup.c
  /**
   * may_access - verifies if a new exception is part of what is allowed
   *		by a dev cgroup based on the default policy +
-@@ -501,13 +534,13 @@
+@@ -498,13 +531,13 @@ static int __propagate_exception(struct 
  	if (devcg == root)
  		return 0;
  
@@ -127,7 +125,7 @@ Index: github/security/device_cgroup.c
  	}
  
  	if (devcg->behavior != parent->behavior) {
-@@ -749,6 +782,16 @@
+@@ -745,6 +778,16 @@ static struct cftype dev_cgroup_files[] 
  		.read_seq_string = devcgroup_seq_read,
  		.private = DEVCG_LIST,
  	},
@@ -144,11 +142,9 @@ Index: github/security/device_cgroup.c
  	{ }	/* terminate */
  };
  
-Index: github/Documentation/cgroups/devices.txt
-===================================================================
---- github.orig/Documentation/cgroups/devices.txt	2012-10-16 17:12:27.102655181 -0400
-+++ github/Documentation/cgroups/devices.txt	2012-10-16 17:12:38.598970931 -0400
-@@ -3,37 +3,65 @@
+--- github.orig/Documentation/cgroups/devices.txt	2012-10-04 10:22:30.087918604 -0400
++++ github/Documentation/cgroups/devices.txt	2012-10-19 17:22:39.565916303 -0400
+@@ -3,37 +3,65 @@ Device Whitelist Controller
  1. Description:
  
  Implement a cgroup to track and enforce open and mknod restrictions
@@ -233,7 +229,7 @@ Index: github/Documentation/cgroups/devices.txt
  
  3. Security
  
-@@ -50,3 +78,10 @@
+@@ -50,3 +78,10 @@ task to a new cgroup.  (Again we'll prob
  
  A cgroup may not be granted more permissions than the cgroup's
  parent has.
