@@ -1,0 +1,169 @@
+xattr: rewrite simple_xattr_set()
+
+The way this function was written is confusing and already caused problems.
+Rewriting it to be easier to understand and maintain.
+
+Cc: Andrew Morton <akpm@linux-foundation.org>                                                                                                                                  
+Cc: Tejun Heo <tj@kernel.org>                                                                                                                                                  
+Cc: Li Zefan <lizefan@huawei.com>                                                                                                                                              
+Cc: Al Viro <viro@ZenIV.linux.org.uk>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+
+---
+ fs/xattr.c |  124 +++++++++++++++++++++++++++++++++++++------------------------
+ 1 file changed, 76 insertions(+), 48 deletions(-)
+
+Index: github/fs/xattr.c
+===================================================================
+--- github.orig/fs/xattr.c	2012-10-23 16:02:41.155857391 -0400
++++ github/fs/xattr.c	2012-10-25 11:17:15.118197552 -0400
+@@ -842,55 +842,46 @@
+ 	return ret;
+ }
+ 
+-static int __simple_xattr_set(struct simple_xattrs *xattrs, const char *name,
+-			      const void *value, size_t size, int flags)
++static struct simple_xattr *__find_xattr(struct simple_xattrs *xattrs,
++					 const char *name)
+ {
+ 	struct simple_xattr *xattr;
+-	struct simple_xattr *new_xattr = NULL;
+-	int err = 0;
+-
+-	/* value == NULL means remove */
+-	if (value) {
+-		new_xattr = simple_xattr_alloc(value, size);
+-		if (!new_xattr)
+-			return -ENOMEM;
+-
+-		new_xattr->name = kstrdup(name, GFP_KERNEL);
+-		if (!new_xattr->name) {
+-			kfree(new_xattr);
+-			return -ENOMEM;
+-		}
+-	}
+ 
+-	spin_lock(&xattrs->lock);
+ 	list_for_each_entry(xattr, &xattrs->head, list) {
+-		if (!strcmp(name, xattr->name)) {
+-			if (flags & XATTR_CREATE) {
+-				xattr = new_xattr;
+-				err = -EEXIST;
+-			} else if (new_xattr) {
+-				list_replace(&xattr->list, &new_xattr->list);
+-			} else {
+-				list_del(&xattr->list);
+-			}
+-			goto out;
+-		}
++		if (!strcmp(name, xattr->name))
++			return xattr;
+ 	}
+-	if (flags & XATTR_REPLACE) {
+-		xattr = new_xattr;
+-		err = -ENODATA;
+-	} else {
+-		list_add(&new_xattr->list, &xattrs->head);
+-		xattr = NULL;
+-	}
+-out:
+-	spin_unlock(&xattrs->lock);
++	return NULL;
++}
++
++static int __simple_xattr_remove(struct simple_xattrs *xattrs,
++				 const char *name)
++{
++	struct simple_xattr *xattr;
++
++	xattr = __find_xattr(xattrs, name);
+ 	if (xattr) {
++		list_del(&xattr->list);
+ 		kfree(xattr->name);
+ 		kfree(xattr);
++		return 0;
+ 	}
+-	return err;
+ 
++	return 1;
++}
++
++/*
++ * xattr REMOVE operation for in-memory/pseudo filesystems
++ */
++int simple_xattr_remove(struct simple_xattrs *xattrs, const char *name)
++{
++	int rc;
++
++	spin_lock(&xattrs->lock);
++	rc = __simple_xattr_remove(xattrs, name);
++	spin_unlock(&xattrs->lock);
++
++	return rc;
+ }
+ 
+ /**
+@@ -910,17 +901,54 @@
+ int simple_xattr_set(struct simple_xattrs *xattrs, const char *name,
+ 		     const void *value, size_t size, int flags)
+ {
++	struct simple_xattr *found, *new_xattr;
++	int err = 0;
++
+ 	if (size == 0)
+-		value = ""; /* empty EA, do not remove */
+-	return __simple_xattr_set(xattrs, name, value, size, flags);
+-}
++		value = ""; /* empty EA */
+ 
+-/*
+- * xattr REMOVE operation for in-memory/pseudo filesystems
+- */
+-int simple_xattr_remove(struct simple_xattrs *xattrs, const char *name)
+-{
+-	return __simple_xattr_set(xattrs, name, NULL, 0, XATTR_REPLACE);
++	/* if value == NULL is specified, remove the item */
++	if (value == NULL)
++		return simple_xattr_remove(xattrs, name);
++
++	new_xattr = simple_xattr_alloc(value, size);
++	if (!new_xattr)
++		return -ENOMEM;
++
++	new_xattr->name = kstrdup(name, GFP_KERNEL);
++	if (!new_xattr->name) {
++		kfree(new_xattr);
++		return -ENOMEM;
++	}
++
++	spin_lock(&xattrs->lock);
++
++	found = __find_xattr(xattrs, name);
++	if (found) {
++		if (flags & XATTR_CREATE) {
++			err = -EEXIST;
++			goto free_new;
++		}
++
++		list_replace(&found->list, &new_xattr->list);
++		kfree(found->name);
++		kfree(found);
++	} else {
++		if (flags & XATTR_REPLACE) {
++			err = -ENODATA;
++			goto free_new;
++		}
++
++		list_add_tail(&new_xattr->list, &xattrs->head);
++	}
++
++out:
++	spin_unlock(&xattrs->lock);
++	return err;
++free_new:
++	kfree(new_xattr->name);
++	kfree(new_xattr);
++	goto out;
+ }
+ 
+ static bool xattr_is_trusted(const char *name)
