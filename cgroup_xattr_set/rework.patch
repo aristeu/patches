@@ -3,9 +3,12 @@ xattr: rewrite simple_xattr_set()
 The way this function was written is confusing and already caused problems.
 Rewriting it to be easier to understand and maintain.
 
-Cc: Andrew Morton <akpm@linux-foundation.org>                                                                                                                                  
-Cc: Tejun Heo <tj@kernel.org>                                                                                                                                                  
-Cc: Li Zefan <lizefan@huawei.com>                                                                                                                                              
+v2:
+- fix error return value in __simple_xattr_remove() (pointed by Tejun Heo)
+
+Cc: Hugh Dickins <hughd@google.com>
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
 Cc: Al Viro <viro@ZenIV.linux.org.uk>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
@@ -85,7 +88,7 @@ Index: github/fs/xattr.c
  	}
 -	return err;
  
-+	return 1;
++	return -ENODATA;
 +}
 +
 +/*
