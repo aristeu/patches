@@ -2,6 +2,7 @@ rcu.patch
 deny_all.patch
 kstrtou32.patch
 fix-perm.patch
+fix_parent.patch
 dev_exception_helpers.patch
 hierarchy.patch
 generalize_walk_tg_tree_from.patch
