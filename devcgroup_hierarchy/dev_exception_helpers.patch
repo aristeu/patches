@@ -1,3 +1,5 @@
+From: Aristeu Rozanski <aris@redhat.com>
+
 device_cgroup: prepare exception list handling functions for two lists
 
 In the following patches, device_cgroup structure will have two sets of
@@ -17,9 +19,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 17:12:37.074928887 -0400
-+++ github/security/device_cgroup.c	2012-10-16 17:12:37.326935839 -0400
-@@ -102,7 +102,7 @@
+--- github.orig/security/device_cgroup.c	2012-11-06 15:13:48.000000000 -0500
++++ github/security/device_cgroup.c	2012-11-06 15:22:27.078833242 -0500
+@@ -104,7 +104,7 @@
  /*
   * called under devcgroup_mutex
   */
@@ -28,7 +30,7 @@ Index: github/security/device_cgroup.c
  			     struct dev_exception_item *ex)
  {
  	struct dev_exception_item *excopy, *walk;
-@@ -111,7 +111,7 @@
+@@ -115,7 +115,7 @@
  	if (!excopy)
  		return -ENOMEM;
  
@@ -37,7 +39,7 @@ Index: github/security/device_cgroup.c
  		if (walk->type != ex->type)
  			continue;
  		if (walk->major != ex->major)
-@@ -125,19 +125,19 @@
+@@ -129,21 +129,21 @@
  	}
  
  	if (excopy != NULL)
@@ -55,12 +57,14 @@ Index: github/security/device_cgroup.c
  {
  	struct dev_exception_item *walk, *tmp;
  
+ 	lockdep_assert_held(&devcgroup_mutex);
+ 
 -	list_for_each_entry_safe(walk, tmp, &dev_cgroup->exceptions, list) {
 +	list_for_each_entry_safe(walk, tmp, exceptions, list) {
  		if (walk->type != ex->type)
  			continue;
  		if (walk->major != ex->major)
-@@ -492,10 +492,10 @@
+@@ -509,10 +509,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -73,7 +77,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -503,10 +503,10 @@
+@@ -520,10 +520,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {

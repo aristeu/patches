@@ -1,3 +1,5 @@
+From: Aristeu Rozanski <aris@redhat.com>
+
 device_cgroup: keep track of local group settings
 
 In preparation for better hierarchy support, it's needed to retain the local
@@ -17,8 +19,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 17:12:37.326935839 -0400
-+++ github/security/device_cgroup.c	2012-10-16 17:12:37.578942789 -0400
+--- github.orig/security/device_cgroup.c	2012-11-06 15:31:26.000000000 -0500
++++ github/security/device_cgroup.c	2012-11-06 16:26:13.075707927 -0500
 @@ -39,13 +39,27 @@
  	struct rcu_head rcu;
  };
@@ -51,7 +53,7 @@ Index: github/security/device_cgroup.c
  };
  
  static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_subsys_state *s)
-@@ -102,8 +116,39 @@
+@@ -104,8 +118,41 @@
  /*
   * called under devcgroup_mutex
   */
@@ -61,6 +63,8 @@ Index: github/security/device_cgroup.c
 +			       struct dev_exception_item *ex)
 +{
 +	struct dev_exception_item *walk, *tmp;
++
++	lockdep_assert_held(&devcgroup_mutex);
 +
 +	list_for_each_entry_safe(walk, tmp, exceptions, list) {
 +		if (walk->type != ex->type)
@@ -93,7 +97,7 @@ Index: github/security/device_cgroup.c
  {
  	struct dev_exception_item *excopy, *walk;
  
-@@ -129,28 +174,24 @@
+@@ -133,30 +180,26 @@
  	return 0;
  }
  
@@ -106,6 +110,8 @@ Index: github/security/device_cgroup.c
  {
 -	struct dev_exception_item *walk, *tmp;
 +	int rc;
+ 
+ 	lockdep_assert_held(&devcgroup_mutex);
  
 -	list_for_each_entry_safe(walk, tmp, exceptions, list) {
 -		if (walk->type != ex->type)
@@ -136,19 +142,19 @@ Index: github/security/device_cgroup.c
  }
  
  /**
-@@ -167,6 +208,11 @@
- 		list_del(&ex->list);
- 		kfree(ex);
+@@ -175,6 +218,11 @@
+ 		list_del_rcu(&ex->list);
+ 		kfree_rcu(ex, rcu);
  	}
 +	list_for_each_entry_safe(ex, tmp, &dev_cgroup->local.exceptions,
 +				 list) {
-+		list_del(&ex->list);
-+		kfree(ex);
++		list_del_rcu(&ex->list);
++		kfree_rcu(ex, rcu);
 +	}
  }
  
  /*
-@@ -182,6 +228,8 @@
+@@ -190,6 +238,8 @@
  	if (!dev_cgroup)
  		return ERR_PTR(-ENOMEM);
  	INIT_LIST_HEAD(&dev_cgroup->exceptions);
@@ -157,12 +163,15 @@ Index: github/security/device_cgroup.c
  	parent_cgroup = cgroup->parent;
  
  	if (parent_cgroup == NULL)
-@@ -399,10 +447,12 @@
- 			if (rc)
- 				return rc;
+@@ -409,6 +459,7 @@
+ 				return -EPERM;
+ 			dev_exception_clean(devcgroup);
  			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
 +			devcgroup->local.behavior = DEVCG_DEFAULT_ALLOW;
- 			break;
+ 			if (!parent)
+ 				break;
+ 
+@@ -420,6 +471,7 @@
  		case DEVCG_DENY:
  			dev_exception_clean(devcgroup);
  			devcgroup->behavior = DEVCG_DEFAULT_DENY;
@@ -170,7 +179,7 @@ Index: github/security/device_cgroup.c
  			break;
  		default:
  			return -EINVAL;
-@@ -492,10 +542,10 @@
+@@ -509,10 +561,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -183,7 +192,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -503,10 +553,10 @@
+@@ -520,10 +572,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {

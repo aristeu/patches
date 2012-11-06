@@ -1,3 +1,5 @@
+From: Aristeu Rozanski <aris@redhat.com>
+
 device_cgroup: propagate local changes down the hierarchy
 
 This patch makes all changes propagate down in hierarchy respecting when
@@ -40,9 +42,11 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |  179 ++++++++++++++++++++++++++++++++++++++++++-----
  1 file changed, 162 insertions(+), 17 deletions(-)
 
---- github.orig/security/device_cgroup.c	2012-10-19 17:20:38.000000000 -0400
-+++ github/security/device_cgroup.c	2012-10-19 17:22:33.092977463 -0400
-@@ -194,6 +194,16 @@ static int dev_exception_add(struct dev_
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-11-06 16:26:16.000000000 -0500
++++ github/security/device_cgroup.c	2012-11-06 16:26:51.112707154 -0500
+@@ -202,6 +202,16 @@
  	return rc;
  }
  
@@ -51,35 +55,37 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 +	struct dev_exception_item *ex, *tmp;
 +
 +	list_for_each_entry_safe(ex, tmp, exceptions, list) {
-+		list_del(&ex->list);
-+		kfree(ex);
++		list_del_rcu(&ex->list);
++		kfree_rcu(ex, rcu);
 +	}
 +}
 +
  /**
   * dev_exception_clean - frees all entries of the exception list
   * @dev_cgroup: dev_cgroup with the exception list to be cleaned
-@@ -202,17 +212,8 @@ static int dev_exception_add(struct dev_
+@@ -210,19 +220,10 @@
   */
  static void dev_exception_clean(struct dev_cgroup *dev_cgroup)
  {
 -	struct dev_exception_item *ex, *tmp;
 -
+ 	lockdep_assert_held(&devcgroup_mutex);
+ 
 -	list_for_each_entry_safe(ex, tmp, &dev_cgroup->exceptions, list) {
--		list_del(&ex->list);
--		kfree(ex);
+-		list_del_rcu(&ex->list);
+-		kfree_rcu(ex, rcu);
 -	}
 -	list_for_each_entry_safe(ex, tmp, &dev_cgroup->local.exceptions,
 -				 list) {
--		list_del(&ex->list);
--		kfree(ex);
+-		list_del_rcu(&ex->list);
+-		kfree_rcu(ex, rcu);
 -	}
 +	__dev_exception_clean(&dev_cgroup->exceptions);
 +	__dev_exception_clean(&dev_cgroup->local.exceptions);
  }
  
  /*
-@@ -415,6 +416,140 @@ static inline int may_allow_all(struct d
+@@ -431,6 +432,140 @@
  	return parent->behavior == DEVCG_DEFAULT_ALLOW;
  }
  
@@ -220,10 +226,19 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  /*
   * Modify the exception list using allow/deny rules.
   * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
-@@ -457,16 +592,18 @@ 	memset(&ex, 0, sizeof(ex));
+@@ -449,7 +584,7 @@
+ {
+ 	const char *b;
+ 	char temp[12];		/* 11 + 1 characters needed for a u32 */
+-	int count, rc;
++	int count, rc = 0;
+ 	struct dev_exception_item ex;
+ 	struct cgroup *p = devcgroup->css.cgroup;
+ 	struct dev_cgroup *parent = NULL;
+@@ -479,16 +614,18 @@
+ 						 &parent->exceptions);
+ 			if (rc)
  				return rc;
- 			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
- 			devcgroup->local.behavior = DEVCG_DEFAULT_ALLOW;
 +			rc = propagate_behavior(devcgroup);
  			break;
  		case DEVCG_DENY:
@@ -241,7 +256,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	case 'b':
  		ex.type = DEV_BLOCK;
  		break;
-@@ -554,7 +691,10 @@ 		case '\0':
+@@ -576,7 +713,10 @@
  			dev_exception_rm(devcgroup, &ex);
  			return 0;
  		}
@@ -253,7 +268,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -565,11 +705,16 @@ 			return 0;
+@@ -587,11 +727,16 @@
  			dev_exception_rm(devcgroup, &ex);
  			return 0;
  		}

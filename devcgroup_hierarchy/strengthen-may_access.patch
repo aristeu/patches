@@ -1,3 +1,5 @@
+From: Aristeu Rozanski <aris@redhat.com>
+
 device_cgroup: make may_access() stronger
 
 In order to revalidate local exceptions for the hierarchy change propagation,
@@ -12,9 +14,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-16 17:12:37.578942789 -0400
-+++ github/security/device_cgroup.c	2012-10-16 17:12:38.098957143 -0400
-@@ -338,13 +338,14 @@
+--- github.orig/security/device_cgroup.c	2012-11-06 16:16:58.000000000 -0500
++++ github/security/device_cgroup.c	2012-11-06 16:21:42.312597554 -0500
+@@ -348,13 +348,14 @@
   *		won't have more privileges than its parent or to
   *		verify if a certain access is allowed.
   * @dev_cgroup: dev cgroup to be tested against
@@ -28,9 +30,9 @@ Index: github/security/device_cgroup.c
 -	bool match = false;
 +	int match = 0;
  
- 	list_for_each_entry(ex, &dev_cgroup->exceptions, list) {
- 		if ((refex->type & DEV_BLOCK) && !(ex->type & DEV_BLOCK))
-@@ -357,22 +358,33 @@
+ 	rcu_lockdep_assert(rcu_read_lock_held() ||
+ 			   lockdep_is_held(&devcgroup_mutex),
+@@ -371,22 +372,33 @@
  			continue;
  		if (refex->access & (~ex->access))
  			continue;

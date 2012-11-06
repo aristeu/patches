@@ -1,8 +1,18 @@
+From: Aristeu Rozanski <aris@redhat.com>
+
+device_cgroup: fix unchecked cgroup parent usage
+
+In 4cef7299b478687 ("device_cgroup: add proper checking when changing
+default behavior") the cgroup parent usage is unchecked.  root will not
+have a parent and trying to use device.{allow,deny} will cause problems. 
+For some reason my stressing scripts didn't test the root directory so I
+didn't catch it on my regular tests.
+
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-26 17:18:01.739366780 -0400
-+++ github/security/device_cgroup.c	2012-10-29 10:03:33.221918003 -0400
-@@ -352,6 +352,8 @@
+--- github.orig/security/device_cgroup.c	2012-11-06 15:13:34.596679814 -0500
++++ github/security/device_cgroup.c	2012-11-06 15:13:48.461048233 -0500
+@@ -364,6 +364,8 @@
   */
  static inline int may_allow_all(struct dev_cgroup *parent)
  {
@@ -11,7 +21,7 @@ Index: github/security/device_cgroup.c
  	return parent->behavior == DEVCG_DEFAULT_ALLOW;
  }
  
-@@ -376,11 +378,14 @@
+@@ -388,11 +390,14 @@
  	int count, rc;
  	struct dev_exception_item ex;
  	struct cgroup *p = devcgroup->css.cgroup;
@@ -27,7 +37,7 @@ Index: github/security/device_cgroup.c
  	memset(&ex, 0, sizeof(ex));
  	b = buffer;
  
-@@ -391,11 +396,14 @@
+@@ -403,11 +408,14 @@
  			if (!may_allow_all(parent))
  				return -EPERM;
  			dev_exception_clean(devcgroup);
