@@ -1,6 +1,6 @@
-fix_parent.patch
+devcg-devcgroup_destroy_locking.patch
 dev_exception_helpers.patch
 hierarchy.patch
-generalize_walk_tg_tree_from.patch
 strengthen-may_access.patch
 propagate.patch
+new_files.patch

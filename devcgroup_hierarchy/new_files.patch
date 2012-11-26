@@ -22,9 +22,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-10-25 12:25:33.786143363 -0400
-+++ github/security/device_cgroup.c	2012-10-26 17:17:48.923035691 -0400
-@@ -263,6 +263,8 @@
+--- github.orig/security/device_cgroup.c	2012-11-15 11:31:17.068092202 -0500
++++ github/security/device_cgroup.c	2012-11-15 11:31:26.504344852 -0500
+@@ -287,6 +287,8 @@
  #define DEVCG_ALLOW 1
  #define DEVCG_DENY 2
  #define DEVCG_LIST 3
@@ -33,7 +33,7 @@ Index: github/security/device_cgroup.c
  
  #define MAJMINLEN 13
  #define ACCLEN 4
-@@ -298,11 +300,25 @@
+@@ -322,11 +324,25 @@
  		sprintf(str, "%u", m);
  }
  
@@ -60,7 +60,7 @@ Index: github/security/device_cgroup.c
  	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
  
  	rcu_read_lock();
-@@ -318,20 +334,37 @@
+@@ -342,20 +358,37 @@
  		set_majmin(min, ~0);
  		seq_printf(m, "%c %s:%s %s\n", type_to_char(DEV_ALL),
  			   maj, min, acc);
@@ -107,27 +107,7 @@ Index: github/security/device_cgroup.c
  /**
   * may_access - verifies if a new exception is part of what is allowed
   *		by a dev cgroup based on the default policy +
-@@ -498,13 +531,13 @@
- 	if (devcg == root)
- 		return 0;
- 
--	/* first copy parent's state */
--	devcg->behavior = parent->behavior;
- 	__dev_exception_clean(&devcg->exceptions);
--	rc = dev_exceptions_copy(&devcg->exceptions, &parent->exceptions);
--	if (rc) {
--		devcg->behavior = DEVCG_DEFAULT_DENY;
--		return rc;
-+	if (parent->behavior == devcg->behavior) {
-+		rc = dev_exceptions_copy(&devcg->exceptions, &parent->exceptions);
-+		if (rc) {
-+			devcg->behavior = DEVCG_DEFAULT_DENY;
-+			return rc;
-+		}
- 	}
- 
- 	if (devcg->behavior != parent->behavior) {
-@@ -745,6 +778,16 @@
+@@ -796,6 +829,16 @@
  		.read_seq_string = devcgroup_seq_read,
  		.private = DEVCG_LIST,
  	},
@@ -146,8 +126,8 @@ Index: github/security/device_cgroup.c
  
 Index: github/Documentation/cgroups/devices.txt
 ===================================================================
---- github.orig/Documentation/cgroups/devices.txt	2012-10-25 12:04:47.348053553 -0400
-+++ github/Documentation/cgroups/devices.txt	2012-10-25 16:20:46.527522395 -0400
+--- github.orig/Documentation/cgroups/devices.txt	2012-11-15 10:39:29.626382716 -0500
++++ github/Documentation/cgroups/devices.txt	2012-11-15 11:31:26.508344955 -0500
 @@ -3,37 +3,65 @@
  1. Description:
  

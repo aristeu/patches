@@ -1,0 +1,138 @@
+From cgroups-owner@vger.kernel.org Tue Nov  6 12:17:24 2012
+Return-Path: <cgroups-owner@vger.kernel.org>
+X-Original-To: aris@localhost
+Delivered-To: aris@localhost
+Received: from tate.lan.ruivo (localhost [127.0.0.1])
+	by jake.ruivo.org (Postfix) with ESMTP id 67A453E62A5
+	for <aris@localhost>; Tue,  6 Nov 2012 12:17:24 -0500 (EST)
+X-Original-To: aris@ruivo.org
+Delivered-To: aris@ruivo.org
+Received: from lobo.ruivo.org [173.14.175.98]
+	by tate.lan.ruivo with POP3 (fetchmail-6.3.21)
+	for <aris@localhost> (single-drop); Tue, 06 Nov 2012 12:17:24 -0500 (EST)
+Received: by lobo.ruivo.org (Postfix, from userid 1011)
+	id 81C9F5233A; Tue,  6 Nov 2012 12:17:11 -0500 (EST)
+X-Spam-Checker-Version: SpamAssassin 3.3.2 (2011-06-06) on tate.lan.ruivo
+X-Spam-Level: *
+X-Spam-Status: No, score=1.2 required=5.0 tests=BAYES_00,KB_DATE_CONTAINS_TAB,
+	TAB_IN_FROM,T_DKIM_INVALID,T_RP_MATCHES_RCVD autolearn=no version=3.3.2
+Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
+	by lobo.ruivo.org (Postfix) with ESMTP id 2494452582
+	for <aris@ruivo.org>; Tue,  6 Nov 2012 12:16:58 -0500 (EST)
+Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
+	id S1751154Ab2KFRQ7 (ORCPT <rfc822;aris@ruivo.org>);
+	Tue, 6 Nov 2012 12:16:59 -0500
+Received: from mail-da0-f46.google.com ([209.85.210.46]:62881 "EHLO
+	mail-da0-f46.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+	with ESMTP id S1750986Ab2KFRQ7 (ORCPT
+	<rfc822;cgroups@vger.kernel.org>); Tue, 6 Nov 2012 12:16:59 -0500
+Received: by mail-da0-f46.google.com with SMTP id n41so281675dak.19
+        for <cgroups@vger.kernel.org>; Tue, 06 Nov 2012 09:16:58 -0800 (PST)
+DKIM-Signature:	v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=sender:date:from:to:cc:subject:message-id:references:mime-version
+         :content-type:content-disposition:in-reply-to:user-agent;
+        bh=nceBspheB8/jHRx+8ovFYiOT12mlvcbg6u6Wk42U29s=;
+        b=iEeqNlEr4SrHNDB2dUkGem1Djf71tXfN8LthOE7W5KkyKSi7V5eOLKWehMjY9mog6T
+         fDUhh/yPWGnA2NtCaKlDd+MapwjuSBuGK6psSlvikBzkDBEJGc7AA+WwtEv73jGbQ/Ou
+         /DrloeC/no8Tmwp57TKq8jm2j/TFJ1AR9FvJgG8EHQ8TM4oXdQ4gWgezfC2GDqSqsp3X
+         ai3RtsG5wna6otksiv6xxdsjL8Vo6XUPKEhx9F+TC5rDxJ9HDMSFvwEwDxG8zNtVjEks
+         2pWKOwzUuOyDa77W0u6T0iPRSGGa8HU7ZKgi33SOrC3y4pQ3JiwC4kweMgGuESaf+vXv
+         /V/Q==
+Received: by 10.68.245.37 with SMTP id xl5mr5121362pbc.120.1352222218558;
+        Tue, 06 Nov 2012 09:16:58 -0800 (PST)
+Received: from mtj.dyndns.org (50-78-106-165-static.hfc.comcastbusiness.net. [50.78.106.165])
+        by mx.google.com with ESMTPS id nm2sm12620200pbc.43.2012.11.06.09.16.56
+        (version=SSLv3 cipher=OTHER);
+        Tue, 06 Nov 2012 09:16:57 -0800 (PST)
+Date:	Tue, 6 Nov 2012 09:16:53 -0800
+From:	Tejun Heo <tj@kernel.org>
+To:	Aristeu Rozanski <aris@redhat.com>, Li Zefan <lizefan@huawei.com>,
+	"Serge E. Hallyn" <serge.hallyn@ubuntu.com>
+Cc:	containers@lists.linux-foundation.org, cgroups@vger.kernel.org
+Subject: [PATCH 2/2] device_cgroup: add lockdep asserts
+Message-ID: <20121106171653.GI30069@mtj.dyndns.org>
+References: <20121106171612.GH30069@mtj.dyndns.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20121106171612.GH30069@mtj.dyndns.org>
+User-Agent: Mutt/1.5.21 (2010-09-15)
+Sender:	cgroups-owner@vger.kernel.org
+Precedence: bulk
+List-ID: <cgroups.vger.kernel.org>
+X-Mailing-List:	cgroups@vger.kernel.org
+Status: RO
+Content-Length: 2216
+
+device_cgroup uses RCU safe ->exceptions list which is write-protected
+by devcgroup_mutex and has had some issues using locking correctly.
+Add lockdep asserts to utility functions so that future errors can be
+easily detected.
+
+Signed-off-by: Tejun Heo <tj@kernel.org>
+Cc: Aristeu Rozanski <aris@redhat.com>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: Serge E. Hallyn <serge.hallyn@ubuntu.com>
+---
+And this one through cgroup/for-3.8.
+
+Thanks.
+
+ security/device_cgroup.c |   12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+--- a/security/device_cgroup.c
++++ b/security/device_cgroup.c
+@@ -82,6 +82,8 @@ static int dev_exceptions_copy(struct li
+ {
+ 	struct dev_exception_item *ex, *tmp, *new;
+ 
++	lockdep_assert_held(&devcgroup_mutex);
++
+ 	list_for_each_entry(ex, orig, list) {
+ 		new = kmemdup(ex, sizeof(*ex), GFP_KERNEL);
+ 		if (!new)
+@@ -107,6 +109,8 @@ static int dev_exception_add(struct dev_
+ {
+ 	struct dev_exception_item *excopy, *walk;
+ 
++	lockdep_assert_held(&devcgroup_mutex);
++
+ 	excopy = kmemdup(ex, sizeof(*ex), GFP_KERNEL);
+ 	if (!excopy)
+ 		return -ENOMEM;
+@@ -137,6 +141,8 @@ static void dev_exception_rm(struct dev_
+ {
+ 	struct dev_exception_item *walk, *tmp;
+ 
++	lockdep_assert_held(&devcgroup_mutex);
++
+ 	list_for_each_entry_safe(walk, tmp, &dev_cgroup->exceptions, list) {
+ 		if (walk->type != ex->type)
+ 			continue;
+@@ -163,6 +169,8 @@ static void dev_exception_clean(struct d
+ {
+ 	struct dev_exception_item *ex, *tmp;
+ 
++	lockdep_assert_held(&devcgroup_mutex);
++
+ 	list_for_each_entry_safe(ex, tmp, &dev_cgroup->exceptions, list) {
+ 		list_del_rcu(&ex->list);
+ 		kfree_rcu(ex, rcu);
+@@ -298,6 +306,10 @@ static int may_access(struct dev_cgroup
+ 	struct dev_exception_item *ex;
+ 	bool match = false;
+ 
++	rcu_lockdep_assert(rcu_read_lock_held() ||
++			   lockdep_is_held(&devcgroup_mutex),
++			   "device_cgroup::may_access() called without proper synchronization");
++
+ 	list_for_each_entry_rcu(ex, &dev_cgroup->exceptions, list) {
+ 		if ((refex->type & DEV_BLOCK) && !(ex->type & DEV_BLOCK))
+ 			continue;
+--
+To unsubscribe from this list: send the line "unsubscribe cgroups" in
+the body of a message to majordomo@vger.kernel.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
+

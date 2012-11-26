@@ -1,0 +1,13 @@
+Index: github/security/device_cgroup.c
+===================================================================
+--- github.orig/security/device_cgroup.c	2012-10-19 11:53:26.272932128 -0400
++++ github/security/device_cgroup.c	2012-10-19 11:57:07.614993710 -0400
+@@ -43,6 +43,8 @@
+ 	struct cgroup_subsys_state css;
+ 	struct list_head exceptions;
+ 	bool deny_all;
++	int pad1;
++	int pad2;
+ };
+ 
+ static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_subsys_state *s)

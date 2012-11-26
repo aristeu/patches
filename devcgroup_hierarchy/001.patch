@@ -1,0 +1,146 @@
+From cgroups-owner@vger.kernel.org Sat Nov  3 04:43:44 2012
+Return-Path: <cgroups-owner@vger.kernel.org>
+X-Original-To: aris@localhost
+Delivered-To: aris@localhost
+Received: from tate.lan.ruivo (localhost [127.0.0.1])
+	by jake.ruivo.org (Postfix) with ESMTP id 087E03E60E0
+	for <aris@localhost>; Sat,  3 Nov 2012 04:43:44 -0400 (EDT)
+X-Original-To: aris@ruivo.org
+Delivered-To: aris@ruivo.org
+Received: from lobo.ruivo.org [173.14.175.98]
+	by tate.lan.ruivo with POP3 (fetchmail-6.3.21)
+	for <aris@localhost> (single-drop); Sat, 03 Nov 2012 04:43:44 -0400 (EDT)
+Received: by lobo.ruivo.org (Postfix, from userid 1011)
+	id 15E0B525DA; Sat,  3 Nov 2012 04:42:19 -0400 (EDT)
+X-Spam-Checker-Version: SpamAssassin 3.3.2 (2011-06-06) on tate.lan.ruivo
+X-Spam-Level: *
+X-Spam-Status: No, score=1.2 required=5.0 tests=BAYES_00,KB_DATE_CONTAINS_TAB,
+	TAB_IN_FROM,T_DKIM_INVALID,T_RP_MATCHES_RCVD autolearn=no version=3.3.2
+Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
+	by lobo.ruivo.org (Postfix) with ESMTP id 6AB3652393
+	for <aris@ruivo.org>; Sat,  3 Nov 2012 04:42:09 -0400 (EDT)
+Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
+	id S1754467Ab2KCIjI (ORCPT <rfc822;aris@ruivo.org>);
+	Sat, 3 Nov 2012 04:39:08 -0400
+Received: from mail-pa0-f46.google.com ([209.85.220.46]:51998 "EHLO
+	mail-pa0-f46.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+	with ESMTP id S1754376Ab2KCIjD (ORCPT
+	<rfc822;cgroups@vger.kernel.org>); Sat, 3 Nov 2012 04:39:03 -0400
+Received: by mail-pa0-f46.google.com with SMTP id hz1so2929534pad.19
+        for <multiple recipients>; Sat, 03 Nov 2012 01:39:03 -0700 (PDT)
+DKIM-Signature:	v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=sender:from:to:cc:subject:date:message-id:x-mailer:in-reply-to
+         :references;
+        bh=LJxn+82QEV2nbu6hcfQ98l8RsO9oVklvjSs2gZsyJ74=;
+        b=owhrwoofIYZ/U7rZaSbl0PJIPLUtjShbE1Tj7D6hZfi/kgg/NwLPGcFSfZFJ5kMgml
+         JkidCr+jDlGmM+W4dfWZvTcjYxUhkNnNw83MRxeyWB9isGadJb3JA1sU7CJmNwmumFtp
+         LhBp7gBJIiEvik+DI5Y82BSa8RiMUnDm5vA/C9fWReJitj3TAmez9UzAIbTPRUznZegI
+         rmW1vIbbufbjNLg+D/dpgAADaxCbF9xANuvxTUtRNAppEx5e2rLgPe2jramzS6RdGtQC
+         oKhrQ87nIDbDSAshcATGy26F2zt7a1qwgpXSfAz+SGCHaZEjUExVeFOiQfGQArpSIw1X
+         d98g==
+Received: by 10.68.252.133 with SMTP id zs5mr13397041pbc.152.1351931942981;
+        Sat, 03 Nov 2012 01:39:02 -0700 (PDT)
+Received: from htj.dyndns.org (50-78-106-165-static.hfc.comcastbusiness.net. [50.78.106.165])
+        by mx.google.com with ESMTPS id o7sm7090130pay.14.2012.11.03.01.38.58
+        (version=TLSv1/SSLv3 cipher=OTHER);
+        Sat, 03 Nov 2012 01:39:02 -0700 (PDT)
+From:	Tejun Heo <tj@kernel.org>
+To:	lizefan@huawei.com, mhocko@suse.cz, rjw@sisk.pl
+Cc:	containers@lists.linux-foundation.org, cgroups@vger.kernel.org,
+	linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org,
+	fweisbec@gmail.com, Tejun Heo <tj@kernel.org>
+Subject: [PATCH 2/9] cgroup: Use rculist ops for cgroup->children
+Date:	Sat,  3 Nov 2012 01:38:28 -0700
+Message-Id: <1351931915-1701-3-git-send-email-tj@kernel.org>
+X-Mailer: git-send-email 1.7.11.7
+In-Reply-To: <1351931915-1701-1-git-send-email-tj@kernel.org>
+References: <1351931915-1701-1-git-send-email-tj@kernel.org>
+Sender:	cgroups-owner@vger.kernel.org
+Precedence: bulk
+List-ID: <cgroups.vger.kernel.org>
+X-Mailing-List:	cgroups@vger.kernel.org
+Status: RO
+Content-Length: 2535
+
+Use RCU safe list operations for cgroup->children.  This will be used
+to implement cgroup children / descendant walking which can be used by
+controllers.
+
+Note that cgroup_create() now puts a new cgroup at the end of the
+->children list instead of head.  This isn't strictly necessary but is
+done so that the iteration order is more conventional.
+
+Signed-off-by: Tejun Heo <tj@kernel.org>
+---
+ include/linux/cgroup.h | 1 +
+ kernel/cgroup.c        | 8 +++-----
+ 2 files changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/include/linux/cgroup.h b/include/linux/cgroup.h
+index b442122..90c33eb 100644
+--- a/include/linux/cgroup.h
++++ b/include/linux/cgroup.h
+@@ -12,6 +12,7 @@
+ #include <linux/cpumask.h>
+ #include <linux/nodemask.h>
+ #include <linux/rcupdate.h>
++#include <linux/rculist.h>
+ #include <linux/cgroupstats.h>
+ #include <linux/prio_heap.h>
+ #include <linux/rwsem.h>
+diff --git a/kernel/cgroup.c b/kernel/cgroup.c
+index f05d992..cc5d2a0 100644
+--- a/kernel/cgroup.c
++++ b/kernel/cgroup.c
+@@ -1650,7 +1650,6 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
+ 
+ 		free_cg_links(&tmp_cg_links);
+ 
+-		BUG_ON(!list_empty(&root_cgrp->sibling));
+ 		BUG_ON(!list_empty(&root_cgrp->children));
+ 		BUG_ON(root->number_of_cgroups != 1);
+ 
+@@ -1699,7 +1698,6 @@ static void cgroup_kill_sb(struct super_block *sb) {
+ 
+ 	BUG_ON(root->number_of_cgroups != 1);
+ 	BUG_ON(!list_empty(&cgrp->children));
+-	BUG_ON(!list_empty(&cgrp->sibling));
+ 
+ 	mutex_lock(&cgroup_mutex);
+ 	mutex_lock(&cgroup_root_mutex);
+@@ -4053,7 +4051,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
+ 		}
+ 	}
+ 
+-	list_add(&cgrp->sibling, &cgrp->parent->children);
++	list_add_tail_rcu(&cgrp->sibling, &cgrp->parent->children);
+ 	root->number_of_cgroups++;
+ 
+ 	err = cgroup_create_dir(cgrp, dentry, mode);
+@@ -4084,7 +4082,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
+ 
+  err_remove:
+ 
+-	list_del(&cgrp->sibling);
++	list_del_rcu(&cgrp->sibling);
+ 	root->number_of_cgroups--;
+ 
+  err_destroy:
+@@ -4210,7 +4208,7 @@ static int cgroup_rmdir(struct inode *unused_dir, struct dentry *dentry)
+ 	raw_spin_unlock(&release_list_lock);
+ 
+ 	/* delete this cgroup from parent->children */
+-	list_del_init(&cgrp->sibling);
++	list_del_rcu(&cgrp->sibling);
+ 
+ 	list_del_init(&cgrp->allcg_node);
+ 
+-- 
+1.7.11.7
+
+--
+To unsubscribe from this list: send the line "unsubscribe cgroups" in
+the body of a message to majordomo@vger.kernel.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
+
