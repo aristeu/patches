@@ -31,6 +31,8 @@ If a new exception is added to group A:
 it'll propagate down and after revalidating B's local exceptions, the exception
 "c 116:2 rwm" will be removed.
 
+The local preferences will be kept and applied when allowed by its parent.
+
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Li Zefan <lizefan@huawei.com>
 Cc: James Morris <jmorris@namei.org>
@@ -39,13 +41,13 @@ Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- security/device_cgroup.c |  179 ++++++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 162 insertions(+), 17 deletions(-)
+ security/device_cgroup.c |  215 ++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 187 insertions(+), 28 deletions(-)
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-11-13 16:27:34.000000000 -0500
-+++ github/security/device_cgroup.c	2012-11-26 15:58:57.351124611 -0500
+--- github.orig/security/device_cgroup.c	2012-11-26 17:28:12.415367313 -0500
++++ github/security/device_cgroup.c	2012-11-26 17:28:17.023491874 -0500
 @@ -89,28 +89,38 @@
  	return 0;
  }

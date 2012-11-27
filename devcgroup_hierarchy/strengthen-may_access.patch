@@ -12,11 +12,15 @@ Cc: Pavel Emelyanov <xemul@openvz.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
+---
+ security/device_cgroup.c |   36 ++++++++++++++++++++++++------------
+ 1 file changed, 24 insertions(+), 12 deletions(-)
+
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-11-06 16:16:58.000000000 -0500
-+++ github/security/device_cgroup.c	2012-11-06 16:21:42.312597554 -0500
-@@ -348,13 +348,14 @@
+--- github.orig/security/device_cgroup.c	2012-11-26 17:28:04.399150628 -0500
++++ github/security/device_cgroup.c	2012-11-27 11:57:55.932996663 -0500
+@@ -352,13 +352,14 @@
   *		won't have more privileges than its parent or to
   *		verify if a certain access is allowed.
   * @dev_cgroup: dev cgroup to be tested against
@@ -32,7 +36,7 @@ Index: github/security/device_cgroup.c
  
  	rcu_lockdep_assert(rcu_read_lock_held() ||
  			   lockdep_is_held(&devcgroup_mutex),
-@@ -371,22 +372,33 @@
+@@ -375,22 +376,33 @@
  			continue;
  		if (refex->access & (~ex->access))
  			continue;

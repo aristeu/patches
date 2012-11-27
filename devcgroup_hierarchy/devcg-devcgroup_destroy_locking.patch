@@ -1,7 +1,20 @@
+device_cgroup: fix locking in devcgroup_destroy()
+
+
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Li Zefan <lizefan@huawei.com>
+Cc: James Morris <jmorris@namei.org>
+Cc: Pavel Emelyanov <xemul@openvz.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+---
+ security/device_cgroup.c |    4 ++++
+ 1 file changed, 4 insertions(+)
+
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-11-13 15:04:31.640001827 -0500
-+++ github/security/device_cgroup.c	2012-11-13 15:05:09.841041467 -0500
+--- github.orig/security/device_cgroup.c	2012-11-26 17:13:54.008153189 -0500
++++ github/security/device_cgroup.c	2012-11-27 11:58:43.574251075 -0500
 @@ -215,7 +215,11 @@
  	struct dev_cgroup *dev_cgroup;
  

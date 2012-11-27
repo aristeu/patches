@@ -19,8 +19,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-11-06 15:13:48.000000000 -0500
-+++ github/security/device_cgroup.c	2012-11-06 15:22:27.078833242 -0500
+--- github.orig/security/device_cgroup.c	2012-11-26 17:13:55.972206330 -0500
++++ github/security/device_cgroup.c	2012-11-27 11:58:28.025841706 -0500
 @@ -104,7 +104,7 @@
  /*
   * called under devcgroup_mutex
@@ -64,7 +64,7 @@ Index: github/security/device_cgroup.c
  		if (walk->type != ex->type)
  			continue;
  		if (walk->major != ex->major)
-@@ -509,10 +509,10 @@
+@@ -513,10 +513,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -77,7 +77,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -520,10 +520,10 @@
+@@ -524,10 +524,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {

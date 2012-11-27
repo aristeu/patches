@@ -14,13 +14,13 @@ Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  
 ---
- security/device_cgroup.c |  106 ++++++++++++++++++++++++++++++++++-------------
- 1 file changed, 78 insertions(+), 28 deletions(-)
+ security/device_cgroup.c |  108 ++++++++++++++++++++++++++++++++++-------------
+ 1 file changed, 80 insertions(+), 28 deletions(-)
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-11-06 15:31:26.000000000 -0500
-+++ github/security/device_cgroup.c	2012-11-06 16:26:13.075707927 -0500
+--- github.orig/security/device_cgroup.c	2012-11-26 17:27:52.710834676 -0500
++++ github/security/device_cgroup.c	2012-11-27 11:58:09.333349468 -0500
 @@ -39,13 +39,27 @@
  	struct rcu_head rcu;
  };
@@ -163,7 +163,7 @@ Index: github/security/device_cgroup.c
  	parent_cgroup = cgroup->parent;
  
  	if (parent_cgroup == NULL)
-@@ -409,6 +459,7 @@
+@@ -413,6 +463,7 @@
  				return -EPERM;
  			dev_exception_clean(devcgroup);
  			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
@@ -171,7 +171,7 @@ Index: github/security/device_cgroup.c
  			if (!parent)
  				break;
  
-@@ -420,6 +471,7 @@
+@@ -424,6 +475,7 @@
  		case DEVCG_DENY:
  			dev_exception_clean(devcgroup);
  			devcgroup->behavior = DEVCG_DEFAULT_DENY;
@@ -179,7 +179,7 @@ Index: github/security/device_cgroup.c
  			break;
  		default:
  			return -EINVAL;
-@@ -509,10 +561,10 @@
+@@ -513,10 +565,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -192,7 +192,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -520,10 +572,10 @@
+@@ -524,10 +576,10 @@
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {
