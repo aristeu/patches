@@ -18,34 +18,32 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-11-26 17:28:04.399150628 -0500
-+++ github/security/device_cgroup.c	2012-11-27 11:57:55.932996663 -0500
-@@ -352,13 +352,14 @@
+--- github.orig/security/device_cgroup.c	2012-12-03 14:35:25.974489919 -0500
++++ github/security/device_cgroup.c	2012-12-04 16:49:47.820544384 -0500
+@@ -352,13 +352,15 @@ static int devcgroup_seq_read(struct cgr
   *		won't have more privileges than its parent or to
   *		verify if a certain access is allowed.
   * @dev_cgroup: dev cgroup to be tested against
 + * @behavior: behavior of the exception
   * @refex: new exception
   */
- static int may_access(struct dev_cgroup *dev_cgroup,
- 		      struct dev_exception_item *refex)
+-static int may_access(struct dev_cgroup *dev_cgroup,
+-		      struct dev_exception_item *refex)
++static bool may_access(struct dev_cgroup *dev_cgroup,
++		       struct dev_exception_item *refex,
++		       enum devcg_behavior behavior)
  {
  	struct dev_exception_item *ex;
 -	bool match = false;
-+	int match = 0;
++	int match = false;
  
  	rcu_lockdep_assert(rcu_read_lock_held() ||
  			   lockdep_is_held(&devcgroup_mutex),
-@@ -375,22 +376,33 @@
- 			continue;
- 		if (refex->access & (~ex->access))
- 			continue;
--		match = true;
-+		match = 1;
+@@ -379,18 +381,28 @@ static int may_access(struct dev_cgroup
  		break;
  	}
  
- 	/*
+-	/*
 -	 * In two cases we'll consider this new exception valid:
 -	 * - the dev cgroup has its default policy to allow + exception list:
 -	 *   the new exception should *not* match any of the exceptions
@@ -53,31 +51,59 @@ Index: github/security/device_cgroup.c
 -	 * - the dev cgroup has its default policy to deny + exception list:
 -	 *   the new exception *should* match the exceptions
 -	 *   (behavior == DEVCG_DEFAULT_DENY, match)
-+	 * The only three possibilities are:
-+	 * devcg->behavior == ALLOW, rule behavior == ALLOW
-+	 * devcg->behavior == ALLOW, rule behavior == DENY
-+	 * devcg->behavior == DENY, rule behavior == DENY
-+	 * the remaining
-+	 * devcg->behavior == DENY, rule behavior == ALLOW
-+	 * won't be possible by hierarchy
-+	 *
-+	 * Since we want to simplify the code, here're the possibilites to
-+	 * make easier to understand:
-+	 *
-+	 * devcg behavior   rule behavior  match  result
-+	 * allow            allow          1      0
-+	 * allow            allow          0      1
-+	 * allow            deny           1      0
-+	 * allow            deny           0      1
-+	 * deny             deny           1      1
-+	 * deny             deny           0      0
- 	 */
+-	 */
 -	if ((dev_cgroup->behavior == DEVCG_DEFAULT_DENY) == match)
 -		return 1;
 -	return 0;
-+	if (dev_cgroup->behavior == DEVCG_DEFAULT_ALLOW)
-+		return !match;
-+	return match;
++	if (dev_cgroup->behavior == DEVCG_DEFAULT_ALLOW) {
++		if (behavior == DEVCG_DEFAULT_ALLOW) {
++			/* the exception will deny access to certain devices */
++			return true;
++		} else {
++			/* the exception will allow access to certain devices */
++			if (match)
++				/*
++				 * a new exception allowing access shouldn't
++				 * match an parent's exception
++				 */
++				return false;
++			return true;
++		}
++	} else {
++		/* only behavior == DEVCG_DEFAULT_DENY allowed here */
++		if (match)
++			/* parent has an exception that matches the proposed */
++			return true;
++		else
++			return false;
++	}
  }
  
  /*
+@@ -407,7 +419,7 @@ static int parent_has_perm(struct dev_cg
+ 	if (!pcg)
+ 		return 1;
+ 	parent = cgroup_to_devcgroup(pcg);
+-	return may_access(parent, ex);
++	return may_access(parent, ex, childcg->behavior);
+ }
+ 
+ /**
+@@ -441,7 +453,7 @@ static int devcgroup_update_access(struc
+ {
+ 	const char *b;
+ 	char temp[12];		/* 11 + 1 characters needed for a u32 */
+-	int count, rc;
++	int count, rc = 0;
+ 	struct dev_exception_item ex;
+ 	struct cgroup *p = devcgroup->css.cgroup;
+ 	struct dev_cgroup *parent = NULL;
+@@ -659,7 +671,7 @@ static int __devcgroup_check_permission(
+ 
+ 	rcu_read_lock();
+ 	dev_cgroup = task_devcgroup(current);
+-	rc = may_access(dev_cgroup, &ex);
++	rc = may_access(dev_cgroup, &ex, dev_cgroup->behavior);
+ 	rcu_read_unlock();
+ 
+ 	if (!rc)

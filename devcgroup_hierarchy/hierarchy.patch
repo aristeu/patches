@@ -19,9 +19,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 Index: github/security/device_cgroup.c
 ===================================================================
---- github.orig/security/device_cgroup.c	2012-11-26 17:27:52.710834676 -0500
-+++ github/security/device_cgroup.c	2012-11-27 11:58:09.333349468 -0500
-@@ -39,13 +39,27 @@
+--- github.orig/security/device_cgroup.c	2012-12-03 14:31:47.184744269 -0500
++++ github/security/device_cgroup.c	2012-12-03 14:35:25.974489919 -0500
+@@ -39,13 +39,27 @@ struct dev_exception_item {
  	struct rcu_head rcu;
  };
  
@@ -53,7 +53,7 @@ Index: github/security/device_cgroup.c
  };
  
  static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_subsys_state *s)
-@@ -104,8 +118,41 @@
+@@ -104,8 +118,41 @@ free_and_exit:
  /*
   * called under devcgroup_mutex
   */
@@ -97,7 +97,7 @@ Index: github/security/device_cgroup.c
  {
  	struct dev_exception_item *excopy, *walk;
  
-@@ -133,30 +180,26 @@
+@@ -133,30 +180,26 @@ static int dev_exception_add(struct list
  	return 0;
  }
  
@@ -142,7 +142,7 @@ Index: github/security/device_cgroup.c
  }
  
  /**
-@@ -175,6 +218,11 @@
+@@ -175,6 +218,11 @@ static void dev_exception_clean(struct d
  		list_del_rcu(&ex->list);
  		kfree_rcu(ex, rcu);
  	}
@@ -154,7 +154,7 @@ Index: github/security/device_cgroup.c
  }
  
  /*
-@@ -190,6 +238,8 @@
+@@ -190,6 +238,8 @@ static struct cgroup_subsys_state *devcg
  	if (!dev_cgroup)
  		return ERR_PTR(-ENOMEM);
  	INIT_LIST_HEAD(&dev_cgroup->exceptions);
@@ -163,15 +163,23 @@ Index: github/security/device_cgroup.c
  	parent_cgroup = cgroup->parent;
  
  	if (parent_cgroup == NULL)
-@@ -413,6 +463,7 @@
+@@ -412,18 +462,19 @@ static int devcgroup_update_access(struc
+ 			if (!may_allow_all(parent))
  				return -EPERM;
  			dev_exception_clean(devcgroup);
++			if (parent)
++				rc = dev_exceptions_copy(&devcgroup->exceptions,
++							 &parent->exceptions);
  			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
+-			if (!parent)
+-				break;
 +			devcgroup->local.behavior = DEVCG_DEFAULT_ALLOW;
- 			if (!parent)
- 				break;
  
-@@ -424,6 +475,7 @@
+-			rc = dev_exceptions_copy(&devcgroup->exceptions,
+-						 &parent->exceptions);
+ 			if (rc)
+ 				return rc;
+ 			break;
  		case DEVCG_DENY:
  			dev_exception_clean(devcgroup);
  			devcgroup->behavior = DEVCG_DEFAULT_DENY;
@@ -179,7 +187,7 @@ Index: github/security/device_cgroup.c
  			break;
  		default:
  			return -EINVAL;
-@@ -513,10 +565,10 @@
+@@ -513,10 +564,10 @@ static int devcgroup_update_access(struc
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -192,7 +200,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -524,10 +576,10 @@
+@@ -524,10 +575,10 @@ static int devcgroup_update_access(struc
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {
