@@ -1,4 +1,4 @@
-devcg-devcgroup_destroy_locking.patch
+devcg-dont_check_for_locking_when_called_by_rcu_callback.patch
 dev_exception_helpers.patch
 hierarchy.patch
 strengthen-may_access.patch

@@ -17,11 +17,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |   18 +++++++++---------
  1 file changed, 9 insertions(+), 9 deletions(-)
 
-Index: github/security/device_cgroup.c
-===================================================================
---- github.orig/security/device_cgroup.c	2012-11-26 17:13:55.972206330 -0500
-+++ github/security/device_cgroup.c	2012-11-27 11:58:28.025841706 -0500
-@@ -104,7 +104,7 @@
+--- github.orig/security/device_cgroup.c	2013-01-23 11:56:58.573088211 -0500
++++ github/security/device_cgroup.c	2013-01-23 11:57:01.000000000 -0500
+@@ -104,7 +104,7 @@ free_and_exit:
  /*
   * called under devcgroup_mutex
   */
@@ -30,7 +28,7 @@ Index: github/security/device_cgroup.c
  			     struct dev_exception_item *ex)
  {
  	struct dev_exception_item *excopy, *walk;
-@@ -115,7 +115,7 @@
+@@ -115,7 +115,7 @@ static int dev_exception_add(struct dev_
  	if (!excopy)
  		return -ENOMEM;
  
@@ -39,7 +37,7 @@ Index: github/security/device_cgroup.c
  		if (walk->type != ex->type)
  			continue;
  		if (walk->major != ex->major)
-@@ -129,21 +129,21 @@
+@@ -129,21 +129,21 @@ static int dev_exception_add(struct dev_
  	}
  
  	if (excopy != NULL)
@@ -64,7 +62,7 @@ Index: github/security/device_cgroup.c
  		if (walk->type != ex->type)
  			continue;
  		if (walk->major != ex->major)
-@@ -513,10 +513,10 @@
+@@ -514,10 +514,10 @@ 		case '\0':
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
@@ -77,7 +75,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -524,10 +524,10 @@
+@@ -525,10 +525,10 @@ 			return 0;
  		 * don't want to break compatibility
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {

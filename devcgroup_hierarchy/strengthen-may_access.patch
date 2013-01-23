@@ -13,14 +13,12 @@ Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- security/device_cgroup.c |   36 ++++++++++++++++++++++++------------
- 1 file changed, 24 insertions(+), 12 deletions(-)
+ security/device_cgroup.c |   48 +++++++++++++++++++++++++++++------------------
+ 1 file changed, 30 insertions(+), 18 deletions(-)
 
-Index: github/security/device_cgroup.c
-===================================================================
---- github.orig/security/device_cgroup.c	2012-12-03 14:35:25.974489919 -0500
-+++ github/security/device_cgroup.c	2012-12-04 16:49:47.820544384 -0500
-@@ -352,13 +352,15 @@ static int devcgroup_seq_read(struct cgr
+--- github.orig/security/device_cgroup.c	2013-01-23 12:02:43.522200445 -0500
++++ github/security/device_cgroup.c	2013-01-23 12:02:49.055282326 -0500
+@@ -353,13 +353,15 @@ 	return 0;
   *		won't have more privileges than its parent or to
   *		verify if a certain access is allowed.
   * @dev_cgroup: dev cgroup to be tested against
@@ -39,7 +37,7 @@ Index: github/security/device_cgroup.c
  
  	rcu_lockdep_assert(rcu_read_lock_held() ||
  			   lockdep_is_held(&devcgroup_mutex),
-@@ -379,18 +381,28 @@ static int may_access(struct dev_cgroup
+@@ -380,18 +382,28 @@ 		if (ex->minor != ~0 && ex->minor != re
  		break;
  	}
  
@@ -80,7 +78,7 @@ Index: github/security/device_cgroup.c
  }
  
  /*
-@@ -407,7 +419,7 @@ static int parent_has_perm(struct dev_cg
+@@ -408,7 +420,7 @@ static int parent_has_perm(struct dev_cg
  	if (!pcg)
  		return 1;
  	parent = cgroup_to_devcgroup(pcg);
@@ -89,7 +87,7 @@ Index: github/security/device_cgroup.c
  }
  
  /**
-@@ -441,7 +453,7 @@ static int devcgroup_update_access(struc
+@@ -442,7 +454,7 @@ static int devcgroup_update_access(struc
  {
  	const char *b;
  	char temp[12];		/* 11 + 1 characters needed for a u32 */
@@ -98,7 +96,7 @@ Index: github/security/device_cgroup.c
  	struct dev_exception_item ex;
  	struct cgroup *p = devcgroup->css.cgroup;
  	struct dev_cgroup *parent = NULL;
-@@ -659,7 +671,7 @@ static int __devcgroup_check_permission(
+@@ -660,7 +672,7 @@ 	memset(&ex, 0, sizeof(ex));
  
  	rcu_read_lock();
  	dev_cgroup = task_devcgroup(current);

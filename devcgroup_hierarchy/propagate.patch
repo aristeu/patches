@@ -41,13 +41,11 @@ Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- security/device_cgroup.c |  215 ++++++++++++++++++++++++++++++++++++++++-------
- 1 file changed, 187 insertions(+), 28 deletions(-)
+ security/device_cgroup.c |  296 ++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 252 insertions(+), 44 deletions(-)
 
-Index: github/security/device_cgroup.c
-===================================================================
---- github.orig/security/device_cgroup.c	2012-12-05 16:37:46.311972058 -0500
-+++ github/security/device_cgroup.c	2012-12-05 17:10:46.676840599 -0500
+--- github.orig/security/device_cgroup.c	2013-01-23 12:02:49.000000000 -0500
++++ github/security/device_cgroup.c	2013-01-23 16:19:59.251997242 -0500
 @@ -89,28 +89,38 @@ static int devcgroup_can_attach(struct c
  	return 0;
  }
@@ -93,39 +91,14 @@ Index: github/security/device_cgroup.c
  	}
  	return -ENOMEM;
  }
-@@ -202,6 +212,18 @@ static int dev_exception_add(struct dev_
+@@ -202,32 +212,80 @@ static int dev_exception_add(struct dev_
  	return rc;
  }
  
-+static void __dev_exception_clean(struct list_head *exceptions)
-+{
-+	struct dev_exception_item *ex, *tmp;
-+
-+	lockdep_assert_held(&devcgroup_mutex);
-+
-+	list_for_each_entry_safe(ex, tmp, exceptions, list) {
-+		list_del_rcu(&ex->list);
-+		kfree_rcu(ex, rcu);
-+	}
-+}
-+
- /**
-  * dev_exception_clean - frees all entries of the exception list
-  * @dev_cgroup: dev_cgroup with the exception list to be cleaned
-@@ -210,19 +232,55 @@ static int dev_exception_add(struct dev_
-  */
- static void dev_exception_clean(struct dev_cgroup *dev_cgroup)
+-static void __dev_exception_clean(struct dev_cgroup *dev_cgroup)
++static void dev_exception_clean(struct list_head *exceptions)
  {
--	struct dev_exception_item *ex, *tmp;
-+	__dev_exception_clean(&dev_cgroup->exceptions);
-+	__dev_exception_clean(&dev_cgroup->local.exceptions);
-+}
- 
--	lockdep_assert_held(&devcgroup_mutex);
-+static inline bool is_devcg_online(const struct dev_cgroup *devcg)
-+{
-+	return (devcg->behavior != DEVCG_DEFAULT_NONE);
-+}
+ 	struct dev_exception_item *ex, *tmp;
  
 -	list_for_each_entry_safe(ex, tmp, &dev_cgroup->exceptions, list) {
 -		list_del_rcu(&ex->list);
@@ -133,8 +106,38 @@ Index: github/security/device_cgroup.c
 -	}
 -	list_for_each_entry_safe(ex, tmp, &dev_cgroup->local.exceptions,
 -				 list) {
--		list_del_rcu(&ex->list);
--		kfree_rcu(ex, rcu);
++	list_for_each_entry_safe(ex, tmp, exceptions, list) {
+ 		list_del_rcu(&ex->list);
+ 		kfree_rcu(ex, rcu);
+ 	}
+ }
+ 
++static void __dev_exception_clean_all(struct dev_cgroup *dev_cgroup)
++{
++	dev_exception_clean(&dev_cgroup->exceptions);
++	dev_exception_clean(&dev_cgroup->local.exceptions);
++}
++
+ /**
+  * dev_exception_clean - frees all entries of the exception list
+  * @dev_cgroup: dev_cgroup with the exception list to be cleaned
+  *
+  * called under devcgroup_mutex
+  */
+-static void dev_exception_clean(struct dev_cgroup *dev_cgroup)
++static void dev_exception_clean_all(struct dev_cgroup *dev_cgroup)
+ {
+ 	lockdep_assert_held(&devcgroup_mutex);
+ 
+-	__dev_exception_clean(dev_cgroup);
++	__dev_exception_clean_all(dev_cgroup);
++}
++
++static inline bool is_devcg_online(const struct dev_cgroup *devcg)
++{
++	return (devcg->behavior != DEVCG_DEFAULT_NONE);
++}
++
 +/**
 + * devcg_for_each_child - traverse online children of a device cgroup
 + * @child_cs: loop cursor pointing to the current child
@@ -166,7 +169,7 @@ Index: github/security/device_cgroup.c
 +		if (!ret)
 +			dev_cgroup->behavior = parent_dev_cgroup->behavior;
 +		mutex_unlock(&devcgroup_mutex);
- 	}
++ 	}
 +
 +	return ret;
 +}
@@ -178,7 +181,7 @@ Index: github/security/device_cgroup.c
  }
  
  /*
-@@ -230,9 +288,8 @@ static void dev_exception_clean(struct d
+@@ -235,9 +293,8 @@ static void dev_exception_clean(struct d
   */
  static struct cgroup_subsys_state *devcgroup_css_alloc(struct cgroup *cgroup)
  {
@@ -189,7 +192,7 @@ Index: github/security/device_cgroup.c
  
  	dev_cgroup = kzalloc(sizeof(*dev_cgroup), GFP_KERNEL);
  	if (!dev_cgroup)
-@@ -240,23 +297,9 @@ static struct cgroup_subsys_state *devcg
+@@ -245,23 +302,9 @@ static struct cgroup_subsys_state *devcg
  	INIT_LIST_HEAD(&dev_cgroup->exceptions);
  	INIT_LIST_HEAD(&dev_cgroup->local.exceptions);
  	dev_cgroup->local.behavior = DEVCG_DEFAULT_NONE;
@@ -214,7 +217,16 @@ Index: github/security/device_cgroup.c
  	return &dev_cgroup->css;
  }
  
-@@ -435,6 +478,143 @@ static inline int may_allow_all(struct d
+@@ -270,7 +313,7 @@ static void devcgroup_css_free(struct cg
+ 	struct dev_cgroup *dev_cgroup;
+ 
+ 	dev_cgroup = cgroup_to_devcgroup(cgroup);
+-	__dev_exception_clean(dev_cgroup);
++	__dev_exception_clean_all(dev_cgroup);
+ 	kfree(dev_cgroup);
+ }
+ 
+@@ -436,6 +479,154 @@ static inline int may_allow_all(struct d
  	return parent->behavior == DEVCG_DEFAULT_ALLOW;
  }
  
@@ -242,7 +254,7 @@ Index: github/security/device_cgroup.c
 +	return 0;
 +
 +error:
-+	__dev_exception_clean(&devcg->exceptions);
++	dev_exception_clean(&devcg->exceptions);
 +	return -ENOMEM;
 +}
 +
@@ -255,17 +267,19 @@ Index: github/security/device_cgroup.c
 +static int propagate_behavior(struct dev_cgroup *devcg)
 +{
 +	struct cgroup *root = devcg->css.cgroup, *pos, *saved = NULL,
-+			*prev = NULL;
++			*prev = NULL, *ptr;
 +	struct dev_cgroup *parent;
 +	int rc = 0;
 +
 +	while (1) {
 +		rcu_read_lock();
-+		devcg_for_each_child(pos, root) {
++		pos = NULL;
++		devcg_for_each_child(ptr, root) {
 +			if (saved && prev != saved) {
 +				prev = pos;
 +				continue;
 +			}
++			pos = ptr;
 +			break;
 +		}
 +		rcu_read_unlock();
@@ -273,15 +287,17 @@ Index: github/security/device_cgroup.c
 +		if (!pos)
 +			break;
 +
-+		BUG_ON(pos == root);
-+		BUG_ON(pos->parent == NULL);
-+
 +		devcg = cgroup_to_devcgroup(pos);
++		/* we may have raced and this cgroup is being removed */
++		if (pos->parent == NULL) {
++			saved = pos;
++			continue;
++		}
 +		parent = cgroup_to_devcgroup(pos->parent);
 +
 +		/* first copy parent's state */
 +		devcg->behavior = parent->behavior;
-+		__dev_exception_clean(&devcg->exceptions);
++		dev_exception_clean(&devcg->exceptions);
 +		rc = dev_exceptions_copy(&devcg->exceptions, &parent->exceptions);
 +		if (rc) {
 +			devcg->behavior = DEVCG_DEFAULT_DENY;
@@ -311,17 +327,19 @@ Index: github/security/device_cgroup.c
 +static int propagate_exception(struct dev_cgroup *devcg)
 +{
 +	struct cgroup *root = devcg->css.cgroup, *pos, *saved = NULL,
-+			*prev = NULL;
++			*prev = NULL, *ptr;
 +	struct dev_cgroup *parent;
 +	int rc = 0;
 +
 +	while(1) {
 +		rcu_read_lock();
-+		devcg_for_each_child(pos, root) {
++		pos = NULL;
++		devcg_for_each_child(ptr, root) {
 +			if (saved && prev != saved) {
 +				prev = pos;
 +				continue;
 +			}
++			pos = ptr;
 +			break;
 +		}
 +		rcu_read_unlock();
@@ -330,9 +348,14 @@ Index: github/security/device_cgroup.c
 +			break;
 +
 +		devcg = cgroup_to_devcgroup(pos);
++		/* we may have raced and this cgroup is being removed */
++		if (pos->parent == NULL) {
++			saved = pos;
++			continue;
++		}
 +		parent = cgroup_to_devcgroup(pos->parent);
 +
-+		__dev_exception_clean(&devcg->exceptions);
++		dev_exception_clean(&devcg->exceptions);
 +		if (devcg->behavior == parent->behavior) {
 +			rc = dev_exceptions_copy(&devcg->exceptions, &parent->exceptions);
 +			if (rc) {
@@ -358,7 +381,14 @@ Index: github/security/device_cgroup.c
  /*
   * Modify the exception list using allow/deny rules.
   * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
-@@ -479,19 +659,20 @@ static int devcgroup_update_access(struc
+@@ -474,25 +665,26 @@ 	memset(&ex, 0, sizeof(ex));
+ 		case DEVCG_ALLOW:
+ 			if (!may_allow_all(parent))
+ 				return -EPERM;
+-			dev_exception_clean(devcgroup);
++			dev_exception_clean_all(devcgroup);
+ 			if (parent)
+ 				rc = dev_exceptions_copy(&devcgroup->exceptions,
  							 &parent->exceptions);
  			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
  			devcgroup->local.behavior = DEVCG_DEFAULT_ALLOW;
@@ -368,7 +398,8 @@ Index: github/security/device_cgroup.c
 +			rc = propagate_behavior(devcgroup);
  			break;
  		case DEVCG_DENY:
- 			dev_exception_clean(devcgroup);
+-			dev_exception_clean(devcgroup);
++			dev_exception_clean_all(devcgroup);
  			devcgroup->behavior = DEVCG_DEFAULT_DENY;
  			devcgroup->local.behavior = DEVCG_DEFAULT_DENY;
 +			rc = propagate_behavior(devcgroup);
@@ -382,7 +413,7 @@ Index: github/security/device_cgroup.c
  	case 'b':
  		ex.type = DEV_BLOCK;
  		break;
-@@ -577,9 +758,14 @@ static int devcgroup_update_access(struc
+@@ -578,9 +770,14 @@ 		case '\0':
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_ALLOW) {
  			dev_exception_rm(devcgroup, &ex);
@@ -399,7 +430,7 @@ Index: github/security/device_cgroup.c
  	case DEVCG_DENY:
  		/*
  		 * If the default policy is to deny by default, try to remove
-@@ -588,13 +774,22 @@ static int devcgroup_update_access(struc
+@@ -589,13 +786,22 @@ 			return 0;
  		 */
  		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {
  			dev_exception_rm(devcgroup, &ex);
@@ -426,7 +457,7 @@ Index: github/security/device_cgroup.c
  }
  
  static int devcgroup_access_write(struct cgroup *cgrp, struct cftype *cft,
-@@ -632,6 +827,8 @@ struct cgroup_subsys devices_subsys = {
+@@ -633,6 +839,8 @@ struct cgroup_subsys devices_subsys = {
  	.name = "devices",
  	.can_attach = devcgroup_can_attach,
  	.css_alloc = devcgroup_css_alloc,
