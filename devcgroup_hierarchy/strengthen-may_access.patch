@@ -1,14 +1,9 @@
-From: Aristeu Rozanski <aris@redhat.com>
-
 device_cgroup: make may_access() stronger
 
 In order to revalidate local exceptions for the hierarchy change propagation,
 make may_access() stronger.
 
 Cc: Tejun Heo <tj@kernel.org>
-Cc: Li Zefan <lizefan@huawei.com>
-Cc: James Morris <jmorris@namei.org>
-Cc: Pavel Emelyanov <xemul@openvz.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
@@ -16,8 +11,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |   48 +++++++++++++++++++++++++++++------------------
  1 file changed, 30 insertions(+), 18 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-23 12:02:43.522200445 -0500
-+++ github/security/device_cgroup.c	2013-01-23 12:02:49.055282326 -0500
+--- github.orig/security/device_cgroup.c	2013-01-24 10:40:46.384253615 -0500
++++ github/security/device_cgroup.c	2013-01-24 10:41:07.513567697 -0500
 @@ -353,13 +353,15 @@ 	return 0;
   *		won't have more privileges than its parent or to
   *		verify if a certain access is allowed.

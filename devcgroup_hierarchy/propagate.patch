@@ -1,5 +1,3 @@
-From: Aristeu Rozanski <aris@redhat.com>
-
 device_cgroup: propagate local changes down the hierarchy
 
 This patch makes all changes propagate down in hierarchy respecting when
@@ -31,12 +29,12 @@ If a new exception is added to group A:
 it'll propagate down and after revalidating B's local exceptions, the exception
 "c 116:2 rwm" will be removed.
 
-The local preferences will be kept and applied when allowed by its parent.
+In case parent behavior or exceptions change and local settings are not
+allowed anymore, they'll be deleted.
+
+v2: instead of keeping the local settings that won't apply anymore, remove them
 
 Cc: Tejun Heo <tj@kernel.org>
-Cc: Li Zefan <lizefan@huawei.com>
-Cc: James Morris <jmorris@namei.org>
-Cc: Pavel Emelyanov <xemul@openvz.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
@@ -44,8 +42,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |  296 ++++++++++++++++++++++++++++++++++++++++-------
  1 file changed, 252 insertions(+), 44 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-23 12:02:49.000000000 -0500
-+++ github/security/device_cgroup.c	2013-01-23 16:19:59.251997242 -0500
+--- github.orig/security/device_cgroup.c	2013-01-24 10:41:07.513567697 -0500
++++ github/security/device_cgroup.c	2013-01-24 10:41:15.545687094 -0500
 @@ -89,28 +89,38 @@ static int devcgroup_can_attach(struct c
  	return 0;
  }
@@ -169,7 +167,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 +		if (!ret)
 +			dev_cgroup->behavior = parent_dev_cgroup->behavior;
 +		mutex_unlock(&devcgroup_mutex);
-+ 	}
++	}
 +
 +	return ret;
 +}

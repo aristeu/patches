@@ -1,0 +1,14 @@
+This patchset implements device cgroup hierarchy. Behaviors and exceptions
+will be propagated down in the tree and local preferences will be re-evaluated
+everytime a change in its parent occours, reapplying them if it's still
+possible.
+
+v2:
+- rebase on top "device_cgroup: don't grab mutex in rcu callback"
+- in case parent changes behavior or exceptions and the local exceptions won't
+  apply anymore, remove them instead of keeping them around.
+
+Cc: Tejun Heo <tj@kernel.org>                                                                                               
+Cc: Serge Hallyn <serge.hallyn@canonical.com>                                                                               
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>                                                                           
+
