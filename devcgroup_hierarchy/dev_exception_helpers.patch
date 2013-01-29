@@ -12,8 +12,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |   18 +++++++++---------
  1 file changed, 9 insertions(+), 9 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-24 10:40:32.814051897 -0500
-+++ github/security/device_cgroup.c	2013-01-24 10:40:33.913068234 -0500
+--- github.orig/security/device_cgroup.c	2013-01-29 11:48:50.603298122 -0500
++++ github/security/device_cgroup.c	2013-01-29 11:49:14.739657516 -0500
 @@ -104,7 +104,7 @@ free_and_exit:
  /*
   * called under devcgroup_mutex

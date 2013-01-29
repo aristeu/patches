@@ -3,6 +3,21 @@ will be propagated down in the tree and local preferences will be re-evaluated
 everytime a change in its parent occours, reapplying them if it's still
 possible.
 
+git://github.com/aristeu/linux-2.6.git
+branch: devcg_hierarchy_review
+
+v3:
+- update documentation
+- move css_online/css_offline changes to a new patch
+- use cgroup_for_each_descendant_pre() instead of own descendant walk
+- move exception_copy rework to a separared patch
+- move exception_clean rework to a separated patch
+- new patch to just move dev_exception_rm() before dev_exception_add()
+  as requested by Tejun.
+- updated patch description for may_access() changes
+- new patch to expand the may_access() logic before changing it
+- fixed argument description order in may_access()
+
 v2:
 - rebase on top "device_cgroup: don't grab mutex in rcu callback"
 - in case parent changes behavior or exceptions and the local exceptions won't

@@ -1,24 +1,31 @@
-device_cgroup: make may_access() stronger
+devcg: prepare may_access() for hierarchy support
 
-In order to revalidate local exceptions for the hierarchy change propagation,
-make may_access() stronger.
+Currently may_access() is only able to verify if an exception is valid for the
+current cgroup, which has the same behavior. With hierarchy, it'll be also used
+to verify if a cgroup local exception is valid towards its cgroup parent, which
+might have different behavior.
+
+v2:
+- updated patch description
+- rebased on top of a new patch to expand the may_access() logic to make it
+  more clear
+- fixed argument description order in may_access()
 
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- security/device_cgroup.c |   48 +++++++++++++++++++++++++++++------------------
- 1 file changed, 30 insertions(+), 18 deletions(-)
+ security/device_cgroup.c |   44 +++++++++++++++++++++++++++-----------------
+ 1 file changed, 27 insertions(+), 17 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-24 10:40:46.384253615 -0500
-+++ github/security/device_cgroup.c	2013-01-24 10:41:07.513567697 -0500
-@@ -353,13 +353,15 @@ 	return 0;
-  *		won't have more privileges than its parent or to
+--- github.orig/security/device_cgroup.c	2013-01-29 11:49:15.514669057 -0500
++++ github/security/device_cgroup.c	2013-01-29 11:49:15.795673240 -0500
+@@ -354,9 +354,11 @@ 	return 0;
   *		verify if a certain access is allowed.
   * @dev_cgroup: dev cgroup to be tested against
-+ * @behavior: behavior of the exception
   * @refex: new exception
++ * @behavior: behavior of the exception
   */
 -static int may_access(struct dev_cgroup *dev_cgroup,
 -		      struct dev_exception_item *refex)
@@ -27,27 +34,21 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 +		       enum devcg_behavior behavior)
  {
  	struct dev_exception_item *ex;
--	bool match = false;
-+	int match = false;
- 
- 	rcu_lockdep_assert(rcu_read_lock_held() ||
- 			   lockdep_is_held(&devcgroup_mutex),
-@@ -380,18 +382,28 @@ 		if (ex->minor != ~0 && ex->minor != re
+ 	bool match = false;
+@@ -380,19 +382,27 @@ 		if (ex->minor != ~0 && ex->minor != re
  		break;
  	}
  
 -	/*
 -	 * In two cases we'll consider this new exception valid:
--	 * - the dev cgroup has its default policy to allow + exception list:
--	 *   the new exception should *not* match any of the exceptions
--	 *   (behavior == DEVCG_DEFAULT_ALLOW, !match)
 -	 * - the dev cgroup has its default policy to deny + exception list:
 -	 *   the new exception *should* match the exceptions
--	 *   (behavior == DEVCG_DEFAULT_DENY, match)
+-	 * - the dev cgroup has its default policy to allow + exception list:
+-	 *   the new exception should *not* match any of the exceptions
 -	 */
--	if ((dev_cgroup->behavior == DEVCG_DEFAULT_DENY) == match)
--		return 1;
--	return 0;
+-	if (dev_cgroup->behavior == DEVCG_DEFAULT_DENY) {
+-		if (match)
+-			return 1;
 +	if (dev_cgroup->behavior == DEVCG_DEFAULT_ALLOW) {
 +		if (behavior == DEVCG_DEFAULT_ALLOW) {
 +			/* the exception will deny access to certain devices */
@@ -62,18 +63,19 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 +				return false;
 +			return true;
 +		}
-+	} else {
+ 	} else {
+-		if (!match)
+-			return 1;
 +		/* only behavior == DEVCG_DEFAULT_DENY allowed here */
 +		if (match)
 +			/* parent has an exception that matches the proposed */
 +			return true;
 +		else
 +			return false;
-+	}
+ 	}
+ 	return 0;
  }
- 
- /*
-@@ -408,7 +420,7 @@ static int parent_has_perm(struct dev_cg
+@@ -411,7 +421,7 @@ static int parent_has_perm(struct dev_cg
  	if (!pcg)
  		return 1;
  	parent = cgroup_to_devcgroup(pcg);
@@ -82,7 +84,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  }
  
  /**
-@@ -442,7 +454,7 @@ static int devcgroup_update_access(struc
+@@ -445,7 +455,7 @@ static int devcgroup_update_access(struc
  {
  	const char *b;
  	char temp[12];		/* 11 + 1 characters needed for a u32 */
@@ -91,7 +93,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	struct dev_exception_item ex;
  	struct cgroup *p = devcgroup->css.cgroup;
  	struct dev_cgroup *parent = NULL;
-@@ -660,7 +672,7 @@ 	memset(&ex, 0, sizeof(ex));
+@@ -663,7 +673,7 @@ 	memset(&ex, 0, sizeof(ex));
  
  	rcu_read_lock();
  	dev_cgroup = task_devcgroup(current);

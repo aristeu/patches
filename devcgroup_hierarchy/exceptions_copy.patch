@@ -1,0 +1,49 @@
+devcg: split single exception copy from dev_exceptions_copy()
+
+This patch is in preparation for hierarchy support
+
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>
+Signed-off-by: Aristeu Rozanski <aris@redhat.com>
+
+---
+ security/device_cgroup.c |   18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
+
+--- github.orig/security/device_cgroup.c	2013-01-29 11:49:16.076677425 -0500
++++ github/security/device_cgroup.c	2013-01-29 11:49:16.374681863 -0500
+@@ -89,20 +89,30 @@ static int devcgroup_can_attach(struct c
+ 	return 0;
+ }
+ 
++static int dev_exception_copy(struct list_head *dest,
++			      struct dev_exception_item *ex)
++{
++	struct dev_exception_item *new;
++
++	new = kmemdup(ex, sizeof(*ex), GFP_KERNEL);
++	if (!new)
++		return -ENOMEM;
++	list_add_tail(&new->list, dest);
++	return 0;
++}
++
+ /*
+  * called under devcgroup_mutex
+  */
+ static int dev_exceptions_copy(struct list_head *dest, struct list_head *orig)
+ {
+-	struct dev_exception_item *ex, *tmp, *new;
++	struct dev_exception_item *ex, *tmp;
+ 
+ 	lockdep_assert_held(&devcgroup_mutex);
+ 
+ 	list_for_each_entry(ex, orig, list) {
+-		new = kmemdup(ex, sizeof(*ex), GFP_KERNEL);
+-		if (!new)
++		if (dev_exception_copy(dest, ex))
+ 			goto free_and_exit;
+-		list_add_tail(&new->list, dest);
+ 	}
+ 
+ 	return 0;

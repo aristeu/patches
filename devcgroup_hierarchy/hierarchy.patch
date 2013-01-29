@@ -4,16 +4,20 @@ In preparation for better hierarchy support, it's needed to retain the local
 settings in order to try to reapply them after a propagated change if they're
 still valid.
 
+v2: split this patch in two, one to just move dev_exception_rm() before
+    dev_exception_add() while keeping functional changes in this patch as
+    requested by Tejun.
+
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  
 ---
- security/device_cgroup.c |  115 +++++++++++++++++++++++++++++++++--------------
- 1 file changed, 83 insertions(+), 32 deletions(-)
+ security/device_cgroup.c |   83 +++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 67 insertions(+), 16 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-24 10:40:33.913068234 -0500
-+++ github/security/device_cgroup.c	2013-01-24 10:40:46.384253615 -0500
+--- github.orig/security/device_cgroup.c	2013-01-29 11:49:14.987661210 -0500
++++ github/security/device_cgroup.c	2013-01-29 11:49:15.244665037 -0500
 @@ -39,13 +39,27 @@ struct dev_exception_item {
  	struct rcu_head rcu;
  };
@@ -46,73 +50,49 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  };
  
  static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_subsys_state *s)
-@@ -104,8 +118,41 @@ free_and_exit:
+@@ -104,8 +118,8 @@ free_and_exit:
  /*
   * called under devcgroup_mutex
   */
--static int dev_exception_add(struct list_head *exceptions,
+-static void dev_exception_rm(struct list_head *exceptions,
 -			     struct dev_exception_item *ex)
 +static void __dev_exception_rm(struct list_head *exceptions,
 +			       struct dev_exception_item *ex)
-+{
-+	struct dev_exception_item *walk, *tmp;
-+
-+	lockdep_assert_held(&devcgroup_mutex);
-+
-+	list_for_each_entry_safe(walk, tmp, exceptions, list) {
-+		if (walk->type != ex->type)
-+			continue;
-+		if (walk->major != ex->major)
-+			continue;
-+		if (walk->minor != ex->minor)
-+			continue;
-+
-+		walk->access &= ~ex->access;
-+		if (!walk->access) {
-+			list_del_rcu(&walk->list);
-+			kfree_rcu(walk, rcu);
-+		}
-+	}
-+}
-+
+ {
+ 	struct dev_exception_item *walk, *tmp;
+ 
+@@ -127,11 +141,18 @@ static void dev_exception_rm(struct list
+ 	}
+ }
+ 
 +static void dev_exception_rm(struct dev_cgroup *devcgroup,
-+			    struct dev_exception_item *ex)
++			     struct dev_exception_item *ex)
 +{
 +	__dev_exception_rm(&devcgroup->local.exceptions, ex);
 +	__dev_exception_rm(&devcgroup->exceptions, ex);
 +}
 +
-+/*
-+ * called under devcgroup_mutex
-+ */
+ /*
+  * called under devcgroup_mutex
+  */
+-static int dev_exception_add(struct list_head *exceptions,
+-			     struct dev_exception_item *ex)
 +static int __dev_exception_add(struct list_head *exceptions,
 +			       struct dev_exception_item *ex)
  {
  	struct dev_exception_item *excopy, *walk;
  
-@@ -133,30 +180,26 @@ static int dev_exception_add(struct list
+@@ -159,6 +180,28 @@ static int dev_exception_add(struct list
  	return 0;
  }
  
--/*
-- * called under devcgroup_mutex
-- */
--static void dev_exception_rm(struct list_head *exceptions,
 +static int dev_exception_add(struct dev_cgroup *devcgroup,
- 			     struct dev_exception_item *ex)
- {
--	struct dev_exception_item *walk, *tmp;
++			     struct dev_exception_item *ex)
++{
 +	int rc;
- 
- 	lockdep_assert_held(&devcgroup_mutex);
- 
--	list_for_each_entry_safe(walk, tmp, exceptions, list) {
--		if (walk->type != ex->type)
--			continue;
--		if (walk->major != ex->major)
--			continue;
--		if (walk->minor != ex->minor)
--			continue;
++
++	lockdep_assert_held(&devcgroup_mutex);
++
 +	/*
 +	 * we add to the local list so we can preserve local preferences if
 +	 * the parent propagates down new rules
@@ -124,17 +104,13 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 +	rc = __dev_exception_add(&devcgroup->exceptions, ex);
 +	if (rc)
 +		__dev_exception_rm(&devcgroup->local.exceptions, ex);
- 
--		walk->access &= ~ex->access;
--		if (!walk->access) {
--			list_del_rcu(&walk->list);
--			kfree_rcu(walk, rcu);
--		}
--	}
++
 +	return rc;
- }
- 
++}
++
  static void __dev_exception_clean(struct dev_cgroup *dev_cgroup)
+ {
+ 	struct dev_exception_item *ex, *tmp;
 @@ -167,6 +210,11 @@ static void __dev_exception_clean(struct
  		list_del_rcu(&ex->list);
  		kfree_rcu(ex, rcu);
