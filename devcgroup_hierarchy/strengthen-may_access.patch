@@ -11,25 +11,25 @@ v2:
   more clear
 - fixed argument description order in may_access()
 
+Acked-by: Tejun Heo <tj@kernel.org>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 
 ---
- security/device_cgroup.c |   44 +++++++++++++++++++++++++++-----------------
- 1 file changed, 27 insertions(+), 17 deletions(-)
+ security/device_cgroup.c |   38 ++++++++++++++++++++++++--------------
+ 1 file changed, 24 insertions(+), 14 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-29 11:49:15.514669057 -0500
-+++ github/security/device_cgroup.c	2013-01-29 11:49:15.795673240 -0500
+--- github.orig/security/device_cgroup.c	2013-01-30 08:58:02.000000000 -0500
++++ github/security/device_cgroup.c	2013-01-30 09:00:09.435351867 -0500
 @@ -354,9 +354,11 @@ 	return 0;
   *		verify if a certain access is allowed.
   * @dev_cgroup: dev cgroup to be tested against
   * @refex: new exception
 + * @behavior: behavior of the exception
   */
--static int may_access(struct dev_cgroup *dev_cgroup,
--		      struct dev_exception_item *refex)
-+static bool may_access(struct dev_cgroup *dev_cgroup,
+ static bool may_access(struct dev_cgroup *dev_cgroup,
+-		       struct dev_exception_item *refex)
 +		       struct dev_exception_item *refex,
 +		       enum devcg_behavior behavior)
  {
@@ -48,11 +48,10 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 -	 */
 -	if (dev_cgroup->behavior == DEVCG_DEFAULT_DENY) {
 -		if (match)
--			return 1;
 +	if (dev_cgroup->behavior == DEVCG_DEFAULT_ALLOW) {
 +		if (behavior == DEVCG_DEFAULT_ALLOW) {
 +			/* the exception will deny access to certain devices */
-+			return true;
+ 			return true;
 +		} else {
 +			/* the exception will allow access to certain devices */
 +			if (match)
@@ -65,15 +64,14 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
 +		}
  	} else {
 -		if (!match)
--			return 1;
 +		/* only behavior == DEVCG_DEFAULT_DENY allowed here */
 +		if (match)
 +			/* parent has an exception that matches the proposed */
-+			return true;
+ 			return true;
 +		else
 +			return false;
  	}
- 	return 0;
+ 	return false;
  }
 @@ -411,7 +421,7 @@ static int parent_has_perm(struct dev_cg
  	if (!pcg)

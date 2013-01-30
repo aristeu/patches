@@ -2,6 +2,9 @@ devcg: split single exception copy from dev_exceptions_copy()
 
 This patch is in preparation for hierarchy support
 
+This patch doesn't introduce any functional changes.
+
+Acked-by: Tejun Heo <tj@kernel.org>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>

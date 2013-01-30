@@ -1,8 +1,15 @@
 devcg: use css_online and css_offline
 
-Allocate resources and change behavior only when online.
-This patch is in preparation for hierarchy support.
+Allocate resources and change behavior only when online. This is needed in
+order to determine if a node is suitable for hierarchy propagation or if it's
+being removed.
 
+Locking:
+Both functions take devcgroup_mutex to make changes to device_cgroup structure.
+Hierarchy propagation will also take devcgroup_mutex before walking the
+tree while walking the tree itself is protected by rcu lock.
+
+Acked-by: Tejun Heo <tj@kernel.org>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
@@ -11,8 +18,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |   59 +++++++++++++++++++++++++++++++++--------------
  1 file changed, 42 insertions(+), 17 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-29 11:49:15.795673240 -0500
-+++ github/security/device_cgroup.c	2013-01-29 11:49:16.076677425 -0500
+--- github.orig/security/device_cgroup.c	2013-01-30 09:00:09.435351867 -0500
++++ github/security/device_cgroup.c	2013-01-30 09:09:12.572464122 -0500
 @@ -230,14 +230,51 @@ static void dev_exception_clean(struct d
  	__dev_exception_clean(dev_cgroup);
  }

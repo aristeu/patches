@@ -3,6 +3,9 @@ devcg: reorder device exception functions
 In preparation for the next patch, reorder dev_exception_add() and
 dev_exception_rm().
 
+This patch doesn't introduce any functional changes.
+
+Acked-by: Tejun Heo <tj@kernel.org>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>

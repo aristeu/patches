@@ -8,6 +8,7 @@ v2: split this patch in two, one to just move dev_exception_rm() before
     dev_exception_add() while keeping functional changes in this patch as
     requested by Tejun.
 
+Acked-by: Tejun Heo <tj@kernel.org>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>

@@ -4,6 +4,7 @@ In the following patches, device_cgroup structure will have two sets of
 behavior and exceptions list (actual one, another with the local settings)
 so rework the functions to use exception list, not a device_cgroup.
 
+Acked-by: Tejun Heo <tj@kernel.org>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
