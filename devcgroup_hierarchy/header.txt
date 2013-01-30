@@ -6,6 +6,9 @@ possible.
 git://github.com/aristeu/linux-2.6.git
 branch: devcg_hierarchy_review
 
+v4:
+- minor fixes pointed by Tejun
+
 v3:
 - update documentation
 - move css_online/css_offline changes to a new patch
