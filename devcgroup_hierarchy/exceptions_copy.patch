@@ -5,6 +5,7 @@ This patch is in preparation for hierarchy support
 This patch doesn't introduce any functional changes.
 
 Acked-by: Tejun Heo <tj@kernel.org>
+Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
@@ -13,9 +14,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |   18 ++++++++++++++----
  1 file changed, 14 insertions(+), 4 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-29 11:49:16.076677425 -0500
-+++ github/security/device_cgroup.c	2013-01-29 11:49:16.374681863 -0500
-@@ -89,20 +89,30 @@ static int devcgroup_can_attach(struct c
+--- github.orig/security/device_cgroup.c	2013-02-14 10:47:12.701185704 -0500
++++ github/security/device_cgroup.c	2013-02-14 10:47:12.933188952 -0500
+@@ -78,20 +78,30 @@ static int devcgroup_can_attach(struct c
  	return 0;
  }
  

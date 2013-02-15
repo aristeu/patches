@@ -1,10 +1,13 @@
-This patchset implements device cgroup hierarchy. Behaviors and exceptions
-will be propagated down in the tree and local preferences will be re-evaluated
+This patchset implements device cgroup hierarchy. Exceptions will be
+propagated down in the tree and local preferences will be re-evaluated
 everytime a change in its parent occours, reapplying them if it's still
 possible.
 
 git://github.com/aristeu/linux-2.6.git
 branch: devcg_hierarchy_review
+
+v5:
+- reworked the patchset to not propagate behavior changes
 
 v4:
 - minor fixes pointed by Tejun

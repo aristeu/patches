@@ -5,6 +5,7 @@ In order to make the next patch more clear, expand may_access() logic.
 v2: may_access() returns bool now
 
 Acked-by: Tejun Heo <tj@kernel.org>
+Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
@@ -13,9 +14,9 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |   21 ++++++++++++---------
  1 file changed, 12 insertions(+), 9 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-30 08:56:29.532063723 -0500
-+++ github/security/device_cgroup.c	2013-01-30 08:58:02.934460404 -0500
-@@ -355,8 +355,8 @@ 	return 0;
+--- github.orig/security/device_cgroup.c	2013-02-14 10:46:45.717808064 -0500
++++ github/security/device_cgroup.c	2013-02-14 10:47:12.146177936 -0500
+@@ -302,8 +302,8 @@ 	return 0;
   * @dev_cgroup: dev cgroup to be tested against
   * @refex: new exception
   */
@@ -26,7 +27,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  {
  	struct dev_exception_item *ex;
  	bool match = false;
-@@ -382,16 +382,19 @@ 		if (ex->minor != ~0 && ex->minor != re
+@@ -329,16 +329,19 @@ 		if (ex->minor != ~0 && ex->minor != re
  
  	/*
  	 * In two cases we'll consider this new exception valid:

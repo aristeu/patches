@@ -1,10 +1,4 @@
-dev_exception_helpers.patch
-reorder_exception_functions.patch
-hierarchy.patch
 split_may_access_logic.patch
 strengthen-may_access.patch
 online.patch
-exceptions_copy.patch
-exception_clean.patch
 propagate.patch
-new_files.patch

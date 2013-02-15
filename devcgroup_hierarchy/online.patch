@@ -10,6 +10,7 @@ Hierarchy propagation will also take devcgroup_mutex before walking the
 tree while walking the tree itself is protected by rcu lock.
 
 Acked-by: Tejun Heo <tj@kernel.org>
+Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
 Cc: Tejun Heo <tj@kernel.org>
 Cc: Serge Hallyn <serge.hallyn@canonical.com>
 Signed-off-by: Aristeu Rozanski <aris@redhat.com>
@@ -18,10 +19,10 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  security/device_cgroup.c |   59 +++++++++++++++++++++++++++++++++--------------
  1 file changed, 42 insertions(+), 17 deletions(-)
 
---- github.orig/security/device_cgroup.c	2013-01-30 09:00:09.435351867 -0500
-+++ github/security/device_cgroup.c	2013-01-30 09:09:12.572464122 -0500
-@@ -230,14 +230,51 @@ static void dev_exception_clean(struct d
- 	__dev_exception_clean(dev_cgroup);
+--- github.orig/security/device_cgroup.c	2013-02-14 10:47:12.411181646 -0500
++++ github/security/device_cgroup.c	2013-02-14 10:47:12.701185704 -0500
+@@ -180,36 +180,59 @@ static void dev_exception_clean(struct d
+ 	}
  }
  
 +/**
@@ -74,10 +75,8 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  
  	dev_cgroup = kzalloc(sizeof(*dev_cgroup), GFP_KERNEL);
  	if (!dev_cgroup)
-@@ -245,23 +282,9 @@ static struct cgroup_subsys_state *devcg
+ 		return ERR_PTR(-ENOMEM);
  	INIT_LIST_HEAD(&dev_cgroup->exceptions);
- 	INIT_LIST_HEAD(&dev_cgroup->local.exceptions);
- 	dev_cgroup->local.behavior = DEVCG_DEFAULT_NONE;
 +	dev_cgroup->behavior = DEVCG_DEFAULT_NONE;
  	parent_cgroup = cgroup->parent;
  
@@ -99,7 +98,7 @@ Signed-off-by: Aristeu Rozanski <aris@redhat.com>
  	return &dev_cgroup->css;
  }
  
-@@ -635,6 +658,8 @@ struct cgroup_subsys devices_subsys = {
+@@ -584,6 +607,8 @@ struct cgroup_subsys devices_subsys = {
  	.can_attach = devcgroup_can_attach,
  	.css_alloc = devcgroup_css_alloc,
  	.css_free = devcgroup_css_free,
